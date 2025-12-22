@@ -1,0 +1,26 @@
+services:
+  backapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: backapp:local
+    container_name: backapp
+    ports:
+      - "8080:8080"
+    command: [ "-port=8080" ]
+    working_dir: /data
+    restart: unless-stopped
+    volumes:
+      - ./volumes/app-data:/data
+      - ./volumes/backups/app:/var/backups/app
+      - ./volumes/backups/archive:/var/backups/archive
+    networks:
+      backapp_net:
+        ipv4_address: 10.200.0.2
+
+networks:
+  backapp_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.200.0.0/24

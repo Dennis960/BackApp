@@ -1,5 +1,6 @@
 # Binaries
 /app
+/volumes
 *.exe
 *.dll
 *.so
