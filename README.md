@@ -63,3 +63,10 @@ In case 8080 is in use, set a different port with `-port=9090`.
 
 ## Template Engine
 - See [docs/template-engine.md](docs/template-engine.md) for authoring template JSON files used by the Generic Template Wizard.
+
+## Not supported
+
+- Deleting backups
+- Incremental backups
+- Backup deduplication
+- Restoring from backups
