@@ -30,6 +30,12 @@ export const backupProfileApi = {
     });
   },
 
+  async duplicate(id: number): Promise<BackupProfile> {
+    return fetchJSON<BackupProfile>(`/backup-profiles/${id}/duplicate`, {
+      method: 'POST',
+    });
+  },
+
   async delete(id: number): Promise<boolean> {
     return fetchWithoutResponse(`/backup-profiles/${id}`, {
       method: 'DELETE',

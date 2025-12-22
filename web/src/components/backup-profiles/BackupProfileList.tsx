@@ -10,13 +10,10 @@ import BackupProfileCard from './BackupProfileCard';
 
 interface BackupProfileListProps {
   profiles: BackupProfile[];
-  onExecute: (id: number) => void;
-  onDelete: (id: number) => void;
-  onEdit: (profile: BackupProfile) => void;
   onRefresh?: () => void;
 }
 
-function BackupProfileList({ profiles, onExecute, onDelete, onEdit, onRefresh }: BackupProfileListProps) {
+function BackupProfileList({ profiles, onRefresh }: BackupProfileListProps) {
   if (profiles.length === 0) {
     return (
       <Card>
@@ -45,9 +42,6 @@ function BackupProfileList({ profiles, onExecute, onDelete, onEdit, onRefresh }:
             <BackupProfileCard
               key={profile.id}
               profile={profile}
-              onExecute={onExecute}
-              onDelete={onDelete}
-              onEdit={onEdit}
               onRefresh={onRefresh}
             />
           ))}

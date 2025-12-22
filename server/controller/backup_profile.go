@@ -94,6 +94,24 @@ func handleBackupProfileDelete(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func handleBackupProfileDuplicate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	duplicateProfile, err := service.ServiceDuplicateBackupProfile(uint(id))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "backup profile not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusCreated, duplicateProfile)
+}
+
 func handleBackupProfileCommandsList(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

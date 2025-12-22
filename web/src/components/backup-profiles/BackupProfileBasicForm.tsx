@@ -22,7 +22,10 @@ function BackupProfileBasicForm({
   namingRules,
   onChange,
 }: BackupProfileBasicFormProps) {
-  const [formData, setFormData] = useState<Partial<BackupProfile>>(initialData || {});
+  const [formData, setFormData] = useState<Partial<BackupProfile>>(() => {
+    // Initialize with initialData or set enabled to false for new profiles
+    return initialData ? initialData : { enabled: false };
+  });
 
   useEffect(() => {
     if (initialData) {

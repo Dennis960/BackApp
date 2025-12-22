@@ -78,6 +78,46 @@ func ServiceDeleteBackupProfile(id uint) error {
 	return DB.Delete(&entity.BackupProfile{}, id).Error
 }
 
+func ServiceDuplicateBackupProfile(id uint) (*entity.BackupProfile, error) {
+	original, err := ServiceGetBackupProfileFull(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a copy of the original profile
+	duplicate := *original
+	duplicate.ID = 0 // Reset ID for new record
+	duplicate.Name = original.Name + " (Copy)"
+	duplicate.Enabled = false // Duplicates are disabled by default
+
+	// Save the duplicate profile
+	if err := DB.Create(&duplicate).Error; err != nil {
+		return nil, err
+	}
+
+	// Duplicate associated commands
+	for _, cmd := range original.Commands {
+		newCmd := cmd
+		newCmd.ID = 0
+		newCmd.BackupProfileID = duplicate.ID
+		if err := DB.Create(&newCmd).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	// Duplicate associated file rules
+	for _, rule := range original.FileRules {
+		newRule := rule
+		newRule.ID = 0
+		newRule.BackupProfileID = duplicate.ID
+		if err := DB.Create(&newRule).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	return &duplicate, nil
+}
+
 func ServiceGetBackupProfileFull(id uint) (*entity.BackupProfile, error) {
 	var profile entity.BackupProfile
 	if err := DB.

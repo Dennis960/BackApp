@@ -1,5 +1,8 @@
 export { default as BackupProfileBasicForm } from './BackupProfileBasicForm';
 export { default as BackupProfileCard } from './BackupProfileCard';
+export { default as BackupProfileCardActions } from './BackupProfileCardActions';
+export { default as BackupProfileCardDetails } from './BackupProfileCardDetails';
+export { default as BackupProfileCardHeader } from './BackupProfileCardHeader';
 export { default as BackupProfileCommandsList } from './BackupProfileCommandsList';
 export { default as BackupProfileDialog } from './BackupProfileDialog';
 export { default as BackupProfileFileRulesList } from './BackupProfileFileRulesList';

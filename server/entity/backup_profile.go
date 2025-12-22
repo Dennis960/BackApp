@@ -10,7 +10,7 @@ type BackupProfile struct {
 	StorageLocationID uint      `gorm:"not null" json:"storage_location_id"`
 	NamingRuleID      uint      `gorm:"not null" json:"naming_rule_id"`
 	ScheduleCron      string    `json:"schedule_cron,omitempty"`
-	Enabled           bool      `gorm:"default:true" json:"enabled"`
+	Enabled           bool      `json:"enabled"`
 	CreatedAt         time.Time `json:"created_at"`
 
 	Server          *Server          `json:"server,omitempty"`

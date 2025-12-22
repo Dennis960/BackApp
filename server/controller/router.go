@@ -41,6 +41,7 @@ func SetupRouter(r *gin.Engine) {
 		api.GET("/backup-profiles/:id", handleBackupProfileGet)
 		api.PUT("/backup-profiles/:id", handleBackupProfileUpdate)
 		api.DELETE("/backup-profiles/:id", handleBackupProfileDelete)
+		api.POST("/backup-profiles/:id/duplicate", handleBackupProfileDuplicate)
 		api.GET("/backup-profiles/:id/commands", handleBackupProfileCommandsList)
 		api.POST("/backup-profiles/:id/commands", handleBackupProfileCommandsCreate)
 		api.GET("/backup-profiles/:id/file-rules", handleBackupProfileFileRulesList)
