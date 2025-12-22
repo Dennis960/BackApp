@@ -24,10 +24,22 @@ It is a very lightweight server (under 50 MB) that runs locally (or on a dedicat
 - Simple and intuitive web interface built with React and Material-UI.
 
 ## Quick start
+
+### Native binary (recommended for smaller setups)
 - Download the latest release for your platform.
 
 - Run the binary, then open your browser to `http://localhost:8080`.
 In case 8080 is in use, set a different port with `-port=9090`.
+
+### Using Docker or Docker Compose
+- Pull the latest image from GitHub Container Registry:
+  ```bash
+  docker pull ghcr.io/dennis960/backapp:latest
+  ```
+- Use the provided `docker-compose.yml` to run BackApp with Docker Compose:
+  ```bash
+  docker-compose up -d
+  ```
 
 ## Build from source
 - Install [Go](https://golang.org/dl/) (1.24+) and [Node.js](https://nodejs.org/en/download/).

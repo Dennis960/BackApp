@@ -1,6 +1,9 @@
 services:
   backapp:
-    image: ghcr.io/dennis960/backapp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: backapp:local
     container_name: backapp
     ports:
       - "8080:8080"

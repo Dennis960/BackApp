@@ -9,8 +9,13 @@ func SetupRouter(r *gin.Engine) {
 	// Static files are now served via embedded FS in main.go
 
 	// v1 REST API endpoints
+	// Health endpoint (root level) for Docker healthcheck
+	r.GET("/health", handleHealth)
+
 	api := r.Group("/api/v1")
 	{
+		// Health endpoint under API as well
+		api.GET("/health", handleHealth)
 		api.GET("/servers", handleServersList)
 		api.POST("/servers", handleServersCreate)
 		api.GET("/servers/:id", handleServerGet)
