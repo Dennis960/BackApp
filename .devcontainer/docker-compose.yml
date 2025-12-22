@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  dev:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu22.04
+    volumes:
+      - ../:/workspace:cached
+    ports:
+      - "8080:8080"
+      - "5173:5173"
+    command: /bin/sh -c "sleep infinity"
+
+  ssh:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    environment:
+      - TZ=Asia/Tokyo
+      - ROOT_PASSWORD=root
+    entrypoint: ["/usr/local/bin/entry_point.sh"]
+    command: ["/usr/sbin/sshd", "-D", "-e"]
+    volumes:
+      - ../home/backapp:/home/backapp

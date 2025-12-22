@@ -1,0 +1,66 @@
+{
+  "id": "postgres-native",
+  "name": "PostgreSQL (host / no Docker)",
+  "description": "Backup PostgreSQL running directly on the host using pg_dump; downloads the dump and cleans up.",
+  "steps": [
+    {
+      "type": "selectServerRemotePath",
+      "id": "dump",
+      "title": "Server and dump location",
+      "description": "Select the server and where to write the temporary SQL dump file.",
+      "vars": {
+        "dockerComposePath": {
+          "label": "Temporary dump file path (on server)",
+          "placeholder": "/tmp/db_backup.sql",
+          "directories": false
+        }
+      }
+    },
+    {
+      "type": "form",
+      "id": "postgres",
+      "title": "PostgreSQL Credentials",
+      "fields": [
+        { "name": "databaseUsername", "label": "Database User", "required": true, "default": "postgres" },
+        { "name": "databaseName", "label": "Database Name", "required": true },
+        { "name": "databasePassword", "label": "Database Password", "required": true, "type": "password" }
+      ]
+    },
+    {
+      "type": "profileDetails",
+      "id": "profile",
+      "title": "Profile Details",
+      "defaults": {
+        "profileName": "PostgreSQL Backup - {{databaseName}}",
+        "scheduleCron": ""
+      }
+    }
+    
+  ],
+  "result": {
+    "profile": {
+      "name": "{{profileName}}",
+      "server_id": "{{server.id}}",
+      "storage_location_id": "{{storageLocationId}}",
+      "naming_rule_id": "{{namingRuleId}}",
+      "schedule_cron": "{{scheduleCron}}",
+      "enabled": false
+    },
+    "commands": [
+      {
+        "run_stage": "pre",
+        "command": "PGPASSWORD={{databasePassword}} pg_dump -U {{databaseUsername}} -d {{databaseName}} -f {{dockerComposePath}}"
+      },
+      {
+        "run_stage": "post",
+        "command": "rm -f {{dockerComposePath}}"
+      }
+    ],
+    "file_rules": [
+      {
+        "remote_path": "{{dockerComposePath}}",
+        "recursive": false
+      }
+    ]
+  }
+}

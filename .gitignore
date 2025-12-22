@@ -1,0 +1,40 @@
+# Binaries
+/app
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+backapp-server
+
+# Output of the build process
+/build/
+/server/static/
+backups/
+/home/backapp/
+
+# Dependency directories
+/vendor/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SQLite database
+app.db
+
+# Logs
+*.log
+
+# Uploaded SSH keys (if any are stored)
+*.pem
+*.key
+
+# Node modules (if any frontend tooling is added)
+node_modules/

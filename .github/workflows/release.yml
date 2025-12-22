@@ -1,0 +1,206 @@
+name: Build and Release BackApp
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend (Node stage)
+        working-directory: web
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          npm run build
+
+      - name: Upload frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: server/static
+
+  build-linux-amd64:
+    name: Build Linux x86_64 Binary
+    needs: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: server/static
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Configure Go proxy (fallback)
+        run: |
+          go env -w GOPROXY=https://goproxy.io,direct
+          go env -w GOSUMDB=sum.golang.org
+
+      - name: Build backend binary
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 1
+        run: |
+          cd server
+          go build -o backapp-server .
+          mv backapp-server backapp-server-linux-amd64
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backapp-server-linux-amd64
+          path: server/backapp-server-linux-amd64
+
+  build-linux-arm64:
+    name: Build Linux ARM64 Binary
+    needs: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: server/static
+
+      - name: Install cross compiler (arm64)
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Configure Go proxy (fallback)
+        run: |
+          go env -w GOPROXY=https://goproxy.io,direct
+          go env -w GOSUMDB=sum.golang.org
+
+      - name: Build backend binary
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CGO_ENABLED: 1
+          CC: aarch64-linux-gnu-gcc
+        run: |
+          cd server
+          go build -o backapp-server .
+          mv backapp-server backapp-server-linux-arm64
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backapp-server-linux-arm64
+          path: server/backapp-server-linux-arm64
+
+  build-raspberry-pi:
+    name: Build Raspberry Pi 2 Binary
+    needs: frontend
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: server/static
+
+      - name: Install cross compiler (armv7)
+        run: apt-get update && apt-get install -y gcc-arm-linux-gnueabihf ca-certificates
+
+      - name: Verify CA store
+        run: ls -l /etc/ssl/certs || true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Configure Go proxy (fallback)
+        run: |
+          go env -w GOPROXY=https://goproxy.io,direct
+          go env -w GOSUMDB=sum.golang.org
+
+      - name: Build backend binary
+        env:
+          GOOS: linux
+          GOARCH: arm
+          GOARM: '7'
+          CGO_ENABLED: 1
+          CC: arm-linux-gnueabihf-gcc
+        run: |
+          cd server
+          go build -o backapp-server .
+          mv backapp-server backapp-server-linux-armv7
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backapp-server-linux-armv7
+          path: server/backapp-server-linux-armv7
+
+  release:
+    name: Publish release
+    needs: [build-linux-amd64, build-linux-arm64, build-raspberry-pi]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download Linux amd64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backapp-server-linux-amd64
+          path: artifacts
+
+      - name: Download Linux arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backapp-server-linux-arm64
+          path: artifacts
+
+      - name: Download Linux armv7 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backapp-server-linux-armv7
+          path: artifacts
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

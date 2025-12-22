@@ -1,0 +1,13 @@
+{
+  "name": "Go with Docker Compose",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/node:1": {}
+    
+  },
+  "forwardPorts": [8080, 5173],
+  "postCreateCommand": "go version"
+}

@@ -1,0 +1,76 @@
+{
+  "name": "PostgreSQL via Docker Compose",
+  "description": "Backup a PostgreSQL database running with Docker Compose; generates pg_dump, downloads it, then cleans up.",
+  "steps": [
+    {
+      "type": "selectServerRemotePath",
+      "id": "compose",
+      "title": "Docker Compose Location",
+      "description": "Choose the server and folder where docker-compose.yml is located",
+      "vars": {
+        "dockerComposePath": {
+          "label": "Docker Compose Path",
+          "placeholder": "/srv/app/docker-compose.yml",
+          "directories": false
+        }
+      }
+    },
+    {
+      "type": "form",
+      "id": "postgres",
+      "title": "PostgreSQL Configuration",
+      "fields": [
+        { "name": "serviceName", "label": "Service Name", "required": true },
+        { "name": "databaseUsername", "label": "Database User", "required": true, "default": "postgres" },
+        { "name": "databaseName", "label": "Database Name", "required": true },
+        { "name": "databasePassword", "label": "Database Password", "required": true, "type": "password" }
+      ]
+    },
+    {
+      "type": "profileDetails",
+      "id": "profile",
+      "title": "Profile Details",
+      "defaults": {
+        "profileName": "PostgreSQL Backup - {{databaseName}}",
+        "scheduleCron": ""
+      }
+    }
+  ],
+  "result": {
+    "profile": {
+      "name": "{{profileName}}",
+      "server_id": "{{server.id}}",
+      "storage_location_id": "{{storageLocationId}}",
+      "naming_rule_id": "{{namingRuleId}}",
+      "schedule_cron": "{{scheduleCron}}",
+      "enabled": false
+    },
+    "commands": [
+      {
+        "run_stage": "pre",
+        "command": "cd {{dockerComposeFolder}} && docker compose exec -T {{serviceName}} pg_dump -U {{databaseUsername}} -d {{databaseName}} -f /tmp/db_backup.sql"
+      },
+      {
+        "run_stage": "pre",
+        "command": "cd {{dockerComposeFolder}} && docker cp $(docker compose ps -q {{serviceName}}):/tmp/db_backup.sql /tmp/db_backup.sql"
+      },
+      {
+        "run_stage": "pre",
+        "command": "cd {{dockerComposeFolder}} && docker compose exec -T {{serviceName}} rm -f /tmp/db_backup.sql"
+      },
+      {
+        "run_stage": "post",
+        "command": "rm -f /tmp/db_backup.sql"
+      }
+    ],
+    "file_rules": [
+      {
+        "remote_path": "/tmp/db_backup.sql",
+        "recursive": false
+      }
+    ]
+  },
+  "computed": {
+    "dockerComposeFolder": "{{dirname dockerComposePath}}"
+  }
+}
