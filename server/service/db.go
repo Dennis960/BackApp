@@ -3,6 +3,7 @@ package service
 import (
 	"backapp-server/entity"
 	"log"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -97,4 +98,24 @@ func initializeDefaults() {
 			}
 		}
 	}
+}
+
+func ResetDatabase() {
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Fatalf("Failed to get raw database connection: %v", err)
+	}
+
+	// Close the existing database connection
+	if err := sqlDB.Close(); err != nil {
+		log.Printf("Warning: Failed to close database connection: %v", err)
+	}
+
+	// Delete the existing database file
+	if err := os.Remove("app.db"); err != nil {
+		log.Printf("Warning: Failed to delete database file: %v", err)
+	}
+
+	// Re-initialize the database
+	InitDB("app.db")
 }

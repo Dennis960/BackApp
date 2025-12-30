@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"backapp-server/config"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -66,5 +68,10 @@ func SetupRouter(r *gin.Engine) {
 		// Templates
 		api.GET("/templates", handleTemplatesList)
 		api.GET("/templates/:id", handleTemplateGet)
+
+		// Test-only endpoints
+		if config.TestMode {
+			api.POST("/test/reset-database", handleResetDatabase)
+		}
 	}
 }

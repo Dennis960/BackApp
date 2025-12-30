@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"backapp-server/config"
 	"backapp-server/controller"
 	"backapp-server/service"
 
@@ -41,7 +42,9 @@ func main() {
 	// Parse command line flags
 	port := flag.Int("port", 8080, "Port to run the server on")
 	dbPath := flag.String("db", "./app.db", "SQLite database path")
+	testMode := flag.Bool("test-mode", false, "Run in test mode with database reset endpoint")
 	flag.Parse()
+	config.TestMode = *testMode
 
 	// Initialize database via service layer
 	service.InitDB(*dbPath)
@@ -106,6 +109,10 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("Server starting on %s...\n", addr)
+
+	if config.TestMode {
+		log.Println("\033[41;37m[WARNING] Server is running in TEST MODE, this will enable test endpoints that do cause high security risks\033[0m")
+	}
 	if err := router.Run(addr); err != nil {
 		log.Fatal(err)
 	}

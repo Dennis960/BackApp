@@ -70,7 +70,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'cd ../build && ./backapp-server -port 8081',
+    command: 'cd ../build && ./backapp-server -port 8081 -test-mode=true',
     url: 'http://localhost:8081',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

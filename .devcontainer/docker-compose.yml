@@ -9,15 +9,3 @@ services:
       - "8080:8080"
       - "5173:5173"
     command: /bin/sh -c "sleep infinity"
-
-  ssh:
-    build:
-      context: .
-      dockerfile: Dockerfile.ssh
-    environment:
-      - TZ=Asia/Tokyo
-      - ROOT_PASSWORD=root
-    entrypoint: ["/usr/local/bin/entry_point.sh"]
-    command: ["/usr/sbin/sshd", "-D", "-e"]
-    volumes:
-      - ../home/backapp:/home/backapp
