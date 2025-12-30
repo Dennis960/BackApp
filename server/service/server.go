@@ -112,7 +112,10 @@ func ServiceUpdateServer(id uint, input *entity.Server) (*entity.Server, error) 
 	server.Port = input.Port
 	server.Username = input.Username
 	server.AuthType = input.AuthType
-	server.Password = input.Password
+	// Only update password if a new one is provided (non-empty)
+	if input.Password != "" {
+		server.Password = input.Password
+	}
 	if server.Port == 0 {
 		server.Port = 22
 	}
