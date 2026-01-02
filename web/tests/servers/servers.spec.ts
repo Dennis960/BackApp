@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
-import { privateKey, startFakeSSHServer } from './server/fake-ssh';
+import { SSH_PRIVATE_KEY, startFakeSSHServer } from '../helpers/fake-ssh-server';
+import { resetDatabase } from '../helpers/api-helpers';
 
 test.beforeEach(async ({ request }) => {
   const response = await request.post('/api/v1/test/reset-database');
@@ -109,7 +110,7 @@ test('should add a server with password authentication on port 24 but fail the t
 });
 
 test('should add a server with private key authentication', async ({ page }) => {
-  await createServerWithKey(page, 'SSH Key Test Server', 'localhost', '2222', 'root', privateKey);
+  await createServerWithKey(page, 'SSH Key Test Server', 'localhost', '2222', 'root', SSH_PRIVATE_KEY);
   const response = await testServerConnection(page, 1, 200);
   expect(response.ok()).toBeTruthy();
 });

@@ -118,6 +118,7 @@ export function DestructiveActionDialog({
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
               {(impact.backupProfiles ?? 0) > 0 && (
                 <Chip
+                  data-testid="impact-profiles"
                   icon={<StorageIcon />}
                   label={`${impact.backupProfiles} Backup Profile${impact.backupProfiles !== 1 ? 's' : ''}`}
                   size="small"
@@ -126,6 +127,7 @@ export function DestructiveActionDialog({
               )}
               {(impact.backupRuns ?? 0) > 0 && (
                 <Chip
+                  data-testid="impact-runs"
                   icon={<BackupIcon />}
                   label={`${impact.backupRuns} Backup Run${impact.backupRuns !== 1 ? 's' : ''}`}
                   size="small"
@@ -134,6 +136,7 @@ export function DestructiveActionDialog({
               )}
               {(impact.backupFiles ?? 0) > 0 && (
                 <Chip
+                  data-testid="impact-files"
                   icon={<InsertDriveFileIcon />}
                   label={`${impact.backupFiles} File${impact.backupFiles !== 1 ? 's' : ''}`}
                   size="small"

@@ -99,6 +99,7 @@ function NamingRules() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAddNew}
+          data-testid="add-naming-rule-btn"
         >
           Add Rule
         </Button>

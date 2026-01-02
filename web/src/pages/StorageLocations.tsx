@@ -264,6 +264,7 @@ function StorageLocations() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleAddNew}
+          data-testid="add-storage-btn"
         >
           Add Location
         </Button>

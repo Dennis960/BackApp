@@ -127,6 +127,11 @@ func ServiceUpdateServer(id uint, input *entity.Server) (*entity.Server, error) 
 
 // ServiceGetServerDeletionImpact returns the impact of deleting a server
 func ServiceGetServerDeletionImpact(serverID uint) (*DeletionImpact, error) {
+	// First, verify server exists
+	if _, err := GetServerByID(serverID); err != nil {
+		return nil, err
+	}
+
 	// Get all backup profiles for this server
 	var profiles []entity.BackupProfile
 	if err := DB.Where("server_id = ?", serverID).Find(&profiles).Error; err != nil {

@@ -66,7 +66,7 @@ function NamingRuleDialog({ onSubmit, onCancel, initialData, open = true }: Nami
   };
 
   return (
-    <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth data-testid="naming-rule-dialog">
       <DialogTitle>{initialData ? 'Edit Naming Rule' : 'New Naming Rule'}</DialogTitle>
       <form onSubmit={onSubmit}>
         <DialogContent>
@@ -78,6 +78,7 @@ function NamingRuleDialog({ onSubmit, onCancel, initialData, open = true }: Nami
               fullWidth
               placeholder="Date + Profile"
               defaultValue={initialData?.name || ''}
+              data-testid="input-name"
             />
 
             <TextField
@@ -90,6 +91,7 @@ function NamingRuleDialog({ onSubmit, onCancel, initialData, open = true }: Nami
               onChange={handlePatternChange}
               multiline
               rows={2}
+              data-testid="input-pattern"
             />
 
             {preview && (
@@ -135,7 +137,7 @@ function NamingRuleDialog({ onSubmit, onCancel, initialData, open = true }: Nami
           <Button onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" variant="contained">
+          <Button type="submit" variant="contained" data-testid="save-naming-rule-btn">
             {initialData ? 'Update Rule' : 'Save Rule'}
           </Button>
         </DialogActions>

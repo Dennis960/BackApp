@@ -28,7 +28,7 @@ function StorageLocationDialog({ open, onSubmit, onCancel, initialData }: Storag
 
   return (
     <>
-      <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth data-testid="storage-form-dialog">
         <form onSubmit={handleSubmit}>
           <input type="hidden" name="base_path" value={basePath} />
           <DialogTitle>
@@ -43,6 +43,7 @@ function StorageLocationDialog({ open, onSubmit, onCancel, initialData }: Storag
                 fullWidth
                 placeholder="Production Backups"
                 defaultValue={initialData?.name || ''}
+                data-testid="input-name"
               />
               <PathPickerField
                 label="Base Path"
@@ -56,7 +57,7 @@ function StorageLocationDialog({ open, onSubmit, onCancel, initialData }: Storag
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button type="submit" variant="contained">
+            <Button type="submit" variant="contained" data-testid="save-storage-btn">
               {initialData ? 'Update Location' : 'Save Location'}
             </Button>
             <Button onClick={onCancel} color="inherit">

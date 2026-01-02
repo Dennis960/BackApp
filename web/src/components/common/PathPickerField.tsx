@@ -48,6 +48,7 @@ function PathPickerField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           helperText={helperText}
+          data-testid="input-base-path"
         />
         <Tooltip title="Browse">
           <IconButton size="small" onClick={() => setOpen(true)} sx={{ mt: size === 'small' ? 0.5 : 1 }}>
