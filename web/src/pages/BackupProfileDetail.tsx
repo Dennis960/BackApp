@@ -1,7 +1,5 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ComputerIcon from '@mui/icons-material/Computer';
-import DownloadIcon from '@mui/icons-material/Download';
-import FolderIcon from '@mui/icons-material/Folder';
 import LabelIcon from '@mui/icons-material/Label';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -14,30 +12,16 @@ import {
   Chip,
   CircularProgress,
   Grid,
-  IconButton,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { backupProfileApi, backupRunApi } from '../api';
-import type { BackupFile, BackupProfile, BackupRun } from '../types';
+import BackupFilesTable, { type BackupFileRow, formatFileSize } from '../components/backups/BackupFilesTable';
+import type { BackupProfile, BackupRun } from '../types';
 import { formatDate } from '../utils/format';
-
-interface ProfileFileRow extends BackupFile {
-  runId: number;
-  runStatus?: string;
-  runStartedAt?: string;
-  runFinishedAt?: string;
-}
 
 function BackupProfileDetail() {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +29,7 @@ function BackupProfileDetail() {
 
   const [profile, setProfile] = useState<BackupProfile | null>(null);
   const [runs, setRuns] = useState<BackupRun[]>([]);
-  const [files, setFiles] = useState<ProfileFileRow[]>([]);
+  const [files, setFiles] = useState<BackupFileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,7 +58,7 @@ function BackupProfileDetail() {
             runStatus: run.status,
             runStartedAt: run.start_time,
             runFinishedAt: run.end_time,
-          } as ProfileFileRow));
+          } as BackupFileRow));
         })
       );
 
@@ -92,25 +76,6 @@ function BackupProfileDetail() {
     () => files.reduce((acc, f) => acc + (f.size_bytes || f.file_size || 0), 0),
     [files]
   );
-
-  const formatSize = (bytes?: number) => {
-    if (!bytes) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  };
-
-  const handleDownloadFile = (fileId: number, filePath: string) => {
-    const downloadUrl = `/api/v1/backup-files/${fileId}/download`;
-    const fileName = filePath.split('/').pop() || 'download';
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   if (loading) {
     return (
@@ -195,7 +160,7 @@ function BackupProfileDetail() {
                       Total Size
                     </Typography>
                     <Typography variant="h5" fontWeight={700}>
-                      {formatSize(totalSize)}
+                      {formatFileSize(totalSize)}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -218,68 +183,13 @@ function BackupProfileDetail() {
         </Grid>
       </Grid>
 
-      <Card>
-        <CardContent>
-          <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <FolderIcon color="action" />
-            <Typography variant="h6" fontWeight={600}>
-              Backup Files
-            </Typography>
-          </Box>
-
-          {files.length === 0 ? (
-            <Alert severity="info">No backup files found for this profile.</Alert>
-          ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Run</TableCell>
-                    <TableCell>Remote Path</TableCell>
-                    <TableCell>Local Path</TableCell>
-                    <TableCell align="right">Size</TableCell>
-                    <TableCell>Created</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {files.map((file) => (
-                    <TableRow key={file.id} hover>
-                      <TableCell>
-                        <Button size="small" onClick={() => navigate(`/backup-runs/${file.runId}`)}>
-                          #{file.runId}
-                        </Button>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {file.runStatus}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                          {file.remote_path}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                          {file.local_path}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">{formatSize(file.size_bytes || file.file_size)}</TableCell>
-                      <TableCell>{formatDate(file.created_at)}</TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Download file">
-                          <IconButton size="small" onClick={() => handleDownloadFile(file.id, file.remote_path || file.local_path)}>
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+      <BackupFilesTable
+        files={files}
+        title="Backup Files"
+        groupByRun={true}
+        initialLimit={10}
+        emptyMessage="No backup files found for this profile."
+      />
     </Box>
   );
 }
