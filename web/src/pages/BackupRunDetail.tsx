@@ -337,15 +337,22 @@ function BackupRunDetail() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Button
             startIcon={<ArrowBackIcon />}
             onClick={() => navigate('/backup-runs')}
           >
             Back
           </Button>
-          <Typography variant="h4" component="h3">
+          <Typography variant="h5" component="h3">
             Backup Run #{run.id}
           </Typography>
           {getStatusBadge(run.status)}
@@ -355,6 +362,8 @@ function BackupRunDetail() {
           color="error"
           startIcon={<DeleteIcon />}
           onClick={handleDeleteRunRequest}
+          fullWidth
+          sx={{ maxWidth: { sm: 'fit-content' } }}
         >
           Delete Run
         </Button>

@@ -1,3 +1,46 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal overflow on mobile */
+#root {
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 600px) {
+  button, 
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+  }
+  
+  /* Make text more readable on small screens */
+  .MuiTypography-h3 {
+    font-size: 1.75rem !important;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
 }

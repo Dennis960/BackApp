@@ -91,8 +91,15 @@ function NamingRules() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h3">
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
+        <Typography variant="h5" component="h3">
           Naming Rules
         </Typography>
         <Button
@@ -100,6 +107,8 @@ function NamingRules() {
           startIcon={<AddIcon />}
           onClick={handleAddNew}
           data-testid="add-naming-rule-btn"
+          fullWidth
+          sx={{ maxWidth: { sm: 'fit-content' } }}
         >
           Add Rule
         </Button>

@@ -30,5 +30,76 @@ export const theme = createTheme({
         },
       },
     },
+    MuiTableContainer: {
+      styleOverrides: {
+        root: {
+          overflowX: 'auto',
+        },
+      },
+    },
+    MuiTable: {
+      styleOverrides: {
+        root: {
+          minWidth: 'auto',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          whiteSpace: 'nowrap',
+          '@media (max-width: 600px)': {
+            padding: '8px 8px',
+            fontSize: '0.875rem',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 600px)': {
+            borderRadius: 8,
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          '@media (max-width: 600px)': {
+            margin: 16,
+            width: 'calc(100% - 32px)',
+            maxHeight: 'calc(100% - 32px)',
+          },
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 600px)': {
+            padding: '16px',
+          },
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          '@media (max-width: 600px)': {
+            padding: '8px 16px 16px',
+            flexDirection: 'column',
+            '& > :not(:first-of-type)': {
+              marginLeft: 0,
+              marginTop: 8,
+            },
+            '& .MuiButton-root': {
+              width: '100%',
+            },
+          },
+        },
+      },
+    },
   },
 });

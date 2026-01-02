@@ -215,7 +215,14 @@ function Servers() {
 
   return (
     <Box data-testid="servers-page">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
         <Typography variant="h5" component="h3" data-testid="servers-title">
           Servers
         </Typography>
@@ -224,6 +231,8 @@ function Servers() {
           startIcon={<AddIcon />}
           onClick={() => setShowDialog(true)}
           data-testid="add-server-btn"
+          fullWidth
+          sx={{ maxWidth: { sm: 'fit-content' } }}
         >
           Add Server
         </Button>

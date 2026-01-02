@@ -51,8 +51,15 @@ function BackupRuns() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h3">
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
+        <Typography variant="h5" component="h3">
           Backup Runs
         </Typography>
         <Box display="flex" gap={1}>
@@ -62,6 +69,8 @@ function BackupRuns() {
               size="small"
               startIcon={<Refresh />}
               onClick={() => setAutoRefresh(!autoRefresh)}
+              fullWidth
+              sx={{ maxWidth: { sm: 'fit-content' } }}
             >
               {autoRefresh ? 'Auto-refresh' : 'Refresh'}
             </Button>

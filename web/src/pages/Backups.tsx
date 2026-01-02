@@ -96,10 +96,17 @@ export default function Backups() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
         <Box display="flex" alignItems="center" gap={1}>
           <FolderOpenIcon />
-          <Typography variant="h4" component="h3">Backups</Typography>
+          <Typography variant="h5" component="h3">Backups</Typography>
         </Box>
         <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
           <IconButton onClick={() => setAutoRefresh(!autoRefresh)} color={autoRefresh ? 'primary' : 'default'}>

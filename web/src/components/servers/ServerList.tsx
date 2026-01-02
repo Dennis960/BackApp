@@ -43,14 +43,14 @@ function ServerList({ servers, testingConnection, onTestConnection, onDeleteServ
   }
 
   return (
-    <Paper data-testid="servers-table-container">
+    <Paper data-testid="servers-table-container" sx={{ overflowX: 'auto' }}>
       <TableContainer>
-        <Table data-testid="servers-table">
+        <Table data-testid="servers-table" sx={{ minWidth: 500 }}>
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Host</TableCell>
-              <TableCell>Username</TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Username</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -61,9 +61,9 @@ function ServerList({ servers, testingConnection, onTestConnection, onDeleteServ
                 <TableCell data-testid="server-host">
                   {server.host}:{server.port}
                 </TableCell>
-                <TableCell data-testid="server-username">{server.username}</TableCell>
+                <TableCell data-testid="server-username" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{server.username}</TableCell>
                 <TableCell>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Button
                       variant="outlined"
                       size="small"
