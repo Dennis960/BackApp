@@ -1,15 +1,14 @@
 # BackApp
 BackApp is a Go + React application that lets automatically schedule and inspect backups of remote servers via SSH.
 
-It is a very lightweight server (~50 MB) that runs locally (or on a dedicated machine) and provides a web interface to manage backup profiles.
+It is a very lightweight server (< 50 MB) that runs locally (or on a dedicated machine) and provides a web interface to manage backup profiles.
 
+![Dashboard.png](./ScreenshotDashboard.png)
 ![Backup Profiles](./ScreenshotBackupProfiles.png)
 ![Backup Runs](./ScreenshotBackupRuns.png)
 ![Backup Run Detail](./ScreenshotBackupRunDetail.png)
 
-> <span style="color: #FFD700">⚠️ **Warning:** Commands, file paths and any variable you enter might not be escaped and will be injected in commands as is. Always check commands and file paths to not contain special characters such as `'`, `"`, `\`, `/` and so on.</span>
-
-> <span style="color: #FFD700">⚠️ **Warning:** Any text you enter in the ui will be saved in plaintext. If you enter passwords or secrets, unlike with the github workflows, they will be displayed in the logs in plaintext.</span>
+> <span style="color: #FFD700">⚠️ **Warning:** Any text you enter in the ui will be saved in plaintext. If you enter passwords or secrets, they will be displayed in the logs in plaintext and stored in the database locally in plaintext. Make sure only you have access to the web interface and the machine running BackApp.</span>
 
 ## Features
 - Add multiple remote servers via SSH using password or key authentication.
@@ -46,11 +45,23 @@ Examples:
 
 ## Quick start
 
-### Native binary (recommended for smaller setups)
+### Native binary (recommended)
 - Download the latest release for your platform.
 
 - Run the binary, then open your browser to `http://localhost:8080`.
 In case 8080 is in use, set a different port with `-port=9090`.
+
+- In the web interface, create a *Server* which represents the remote server you want to back up.
+  - Provide the SSH connection details (hostname, port, username, authentication method).
+- Next, create a *Backup Profile*.
+  - Select the server you just created.
+  - Define the storage location on your local machine where backups will be stored.
+  - Set up the naming rule for the backup folders.
+  - Optionally, add pre- and post-backup commands to run on the remote server.
+  - Define file rules to include/exclude specific paths in the backup.
+  - Set the schedule for automatic backups using a cron expression.
+- Save the backup profile and trigger a manual backup run to test it.
+- Monitor the backup run in the web interface and view detailed logs.
 
 ### Using Docker or Docker Compose
 - Pull the latest image from GitHub Container Registry:
