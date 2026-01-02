@@ -46,3 +46,20 @@ jobs:
           files: artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker_publish_latest:
+    name: Build and Push Docker (latest)
+    needs: build-and-test
+    if: ${{ needs.build-and-test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and publish Docker image
+        uses: Dennis960/push-to-ghcr@master
+        with:
+          image_name: ${{ github.repository }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dockerfile: Dockerfile
+          context: .
+          image_tag: latest

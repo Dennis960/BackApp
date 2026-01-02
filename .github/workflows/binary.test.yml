@@ -90,3 +90,20 @@ jobs:
           name: E2E html report
           path: web/test-results/html
           retention-days: 1
+
+  docker_publish_dev:
+    name: Build and Push Docker (dev)
+    needs: test
+    if: ${{ needs.test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and publish Docker image
+        uses: Dennis960/push-to-ghcr@master
+        with:
+          image_name: ${{ github.repository }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dockerfile: Dockerfile
+          context: .
+          image_tag: dev
