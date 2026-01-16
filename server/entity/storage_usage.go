@@ -5,6 +5,7 @@ type StorageUsage struct {
 	StorageLocationID uint    `json:"storage_location_id"`
 	Name              string  `json:"name"`
 	BasePath          string  `json:"base_path"`
+	Enabled           bool    `json:"enabled"`
 	TotalBytes        int64   `json:"total_bytes"`
 	UsedBytes         int64   `json:"used_bytes"`
 	FreeBytes         int64   `json:"free_bytes"`

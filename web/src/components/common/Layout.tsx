@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { appVersion, buildNumber } from '../../buildInfo';
 
 const drawerWidth = 240;
 
@@ -79,7 +80,7 @@ function Layout({ children }: LayoutProps) {
   };
 
   const drawerContent = (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ p: 2 }}>
         <Typography variant="h5" component="h1" fontWeight="bold">
           BackApp
@@ -148,7 +149,19 @@ function Layout({ children }: LayoutProps) {
           </ListItem>
         ))}
       </List>
-    </>
+      <Box sx={{ mt: 'auto', px: 2, pb: 1.5, display: 'flex', justifyContent: 'center' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontWeight: 600,
+            textAlign: 'center',
+          }}
+        >
+          v{appVersion} | build {buildNumber}
+        </Typography>
+      </Box>
+    </Box>
   );
 
   return (

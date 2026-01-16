@@ -9,6 +9,7 @@ interface PathPickerFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   helperText?: string;
+  error?: boolean;
   size?: 'small' | 'medium';
   fullWidth?: boolean;
   disabled?: boolean;
@@ -24,6 +25,7 @@ function PathPickerField({
   onChange,
   placeholder,
   helperText,
+  error = false,
   size = 'small',
   fullWidth = true,
   disabled = false,
@@ -48,6 +50,7 @@ function PathPickerField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           helperText={helperText}
+          error={error}
           data-testid="input-base-path"
         />
         <Tooltip title="Browse">

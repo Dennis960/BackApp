@@ -1,5 +1,6 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import {
   Alert,
   Box,
@@ -46,6 +47,15 @@ function BackupRunDetail() {
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<BackupFile | null>(null);
   const [deletingFile, setDeletingFile] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/backup-runs');
+  };
 
   useEffect(() => {
     if (id) {
@@ -123,6 +133,30 @@ function BackupRunDetail() {
       }
     } catch (err) {
       console.error('Error loading new logs:', err);
+    }
+  };
+
+  const refreshRunDetails = async (runId: number) => {
+    try {
+      setRefreshing(true);
+      const [runData, filesData, logsData] = await Promise.all([
+        backupRunApi.get(runId),
+        backupRunApi.getFiles(runId),
+        backupRunApi.getLogs(runId),
+      ]);
+      setRun(runData);
+      setFiles(filesData || []);
+      setLogs(logsData || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error refreshing backup run:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to refresh backup run',
+        severity: 'error',
+      });
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -325,10 +359,10 @@ function BackupRunDetail() {
       <Box>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/backup-runs')}
+          onClick={handleBack}
           sx={{ mb: 3 }}
         >
-          Back to Backup Runs
+          Back
         </Button>
         <Alert severity="error">{error || 'Backup run not found'}</Alert>
       </Box>
@@ -348,7 +382,7 @@ function BackupRunDetail() {
         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Button
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/backup-runs')}
+            onClick={handleBack}
           >
             Back
           </Button>
@@ -357,16 +391,25 @@ function BackupRunDetail() {
           </Typography>
           {getStatusBadge(run.status)}
         </Box>
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<DeleteIcon />}
-          onClick={handleDeleteRunRequest}
-          fullWidth
-          sx={{ maxWidth: { sm: 'fit-content' } }}
-        >
-          Delete Run
-        </Button>
+        <Box display="flex" gap={1} flexWrap="wrap" justifyContent="flex-end">
+          <Button
+            variant="outlined"
+            startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshIcon />}
+            onClick={() => id && refreshRunDetails(parseInt(id))}
+            disabled={refreshing}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleDeleteRunRequest}
+            sx={{ maxWidth: { sm: 'fit-content' } }}
+          >
+            Delete Run
+          </Button>
+        </Box>
       </Box>
 
       <Grid container spacing={3} mb={3}>

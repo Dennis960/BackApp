@@ -1,15 +1,36 @@
-import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, TextField } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Tooltip,
+} from '@mui/material';
 import PathPickerField from '../common/PathPickerField';
 
 interface AddFileRuleFormProps {
   formData: {
     remote_path: string;
     recursive: boolean;
+    compress: boolean;
+    compress_format: string;
+    compress_password: string;
     exclude_pattern: string;
   };
   onFormDataChange: (data: {
     remote_path: string;
     recursive: boolean;
+    compress: boolean;
+    compress_format: string;
+    compress_password: string;
     exclude_pattern: string;
   }) => void;
   onAdd: () => void;
@@ -18,6 +39,8 @@ interface AddFileRuleFormProps {
 }
 
 function AddFileRuleForm({ formData, onFormDataChange, onAdd, serverId, onCancel }: AddFileRuleFormProps) {
+  const trimmedPath = formData.remote_path.trim();
+
   return (
     <>
       <Card sx={{ mb: 2, backgroundColor: '#f5f5f5' }}>
@@ -42,6 +65,50 @@ function AddFileRuleForm({ formData, onFormDataChange, onAdd, serverId, onCancel
                 }
                 label="Recursive"
               />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.compress}
+                    onChange={(e) => onFormDataChange({ ...formData, compress: e.target.checked })}
+                  />
+                }
+                label={(
+                  <Box display="flex" alignItems="center" gap={0.5}>
+                    <span>Compress</span>
+                    <Tooltip title="For SFTP storage, compression runs locally on the BackApp instance.">
+                      <InfoOutlinedIcon fontSize="small" />
+                    </Tooltip>
+                  </Box>
+                )}
+              />
+              {formData.compress && (
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Format</InputLabel>
+                  <Select
+                    label="Format"
+                    value={formData.compress_format}
+                    onChange={(e) => onFormDataChange({
+                      ...formData,
+                      compress_format: e.target.value,
+                      compress_password: e.target.value === 'zip' ? '' : formData.compress_password,
+                    })}
+                  >
+                    <MenuItem value="7z">7z (encrypted optional)</MenuItem>
+                    <MenuItem value="zip">zip (no encryption)</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+              {formData.compress && formData.compress_format !== 'zip' && (
+                <TextField
+                  fullWidth
+                  label="7z Password"
+                  type="password"
+                  value={formData.compress_password}
+                  onChange={(e) => onFormDataChange({ ...formData, compress_password: e.target.value })}
+                  placeholder="Optional"
+                  size="small"
+                />
+              )}
               <TextField
                 fullWidth
                 label="Exclude Pattern"
@@ -62,7 +129,7 @@ function AddFileRuleForm({ formData, onFormDataChange, onAdd, serverId, onCancel
                 <Button
                   onClick={onAdd}
                   variant="contained"
-                  disabled={!formData.remote_path.trim()}
+                  disabled={!trimmedPath}
                   size="small"
                 >
                   Add

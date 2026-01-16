@@ -22,7 +22,8 @@ function BackupRuns() {
   const loadRuns = useCallback(async () => {
     try {
       const data = await backupRunApi.list();
-      setRuns(data || []);
+      const sorted = (data || []).slice().sort((a, b) => b.id - a.id);
+      setRuns(sorted);
     } catch (error) {
       console.error('Error loading runs:', error);
     } finally {

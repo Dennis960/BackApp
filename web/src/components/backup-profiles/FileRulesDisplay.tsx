@@ -20,6 +20,9 @@ function FileRulesDisplay({ fileRules, profileId, serverId, onFileRulesChanged, 
   const [formData, setFormData] = useState({
     remote_path: '',
     recursive: true,
+    compress: false,
+    compress_format: '7z',
+    compress_password: '',
     exclude_pattern: '',
   });
 
@@ -32,11 +35,17 @@ function FileRulesDisplay({ fileRules, profileId, serverId, onFileRulesChanged, 
       await fileRuleApi.create(profileId, {
         remote_path: formData.remote_path.trim(),
         recursive: formData.recursive,
+        compress: formData.compress,
+        compress_format: formData.compress ? formData.compress_format : undefined,
+        compress_password: formData.compress_password.trim() || undefined,
         exclude_pattern: formData.exclude_pattern.trim() || undefined,
       });
       setFormData({
         remote_path: '',
         recursive: true,
+        compress: false,
+        compress_format: '7z',
+        compress_password: '',
         exclude_pattern: '',
       });
       setShowAddForm(false);
@@ -79,6 +88,9 @@ function FileRulesDisplay({ fileRules, profileId, serverId, onFileRulesChanged, 
             setFormData({
               remote_path: '',
               recursive: true,
+              compress: false,
+              compress_format: '7z',
+              compress_password: '',
               exclude_pattern: '',
             });
           }}

@@ -26,6 +26,17 @@ func ServiceGetStorageLocation(id uint) (*entity.StorageLocation, error) {
 }
 
 func ServiceCreateStorageLocation(input *entity.StorageLocation) (*entity.StorageLocation, error) {
+	input.Enabled = true
+	if input.Type == "" {
+		input.Type = storageTypeLocal
+	}
+	if input.Type == storageTypeSFTP && input.AuthType == "" {
+		if input.SSHKey != "" {
+			input.AuthType = "key"
+		} else if input.Password != "" {
+			input.AuthType = "password"
+		}
+	}
 	if err := DB.Create(input).Error; err != nil {
 		return nil, err
 	}
@@ -51,7 +62,7 @@ func ServiceGetStorageLocationMoveImpact(id uint, newPath string) (*StorageLocat
 	}
 
 	impact := &StorageLocationMoveImpact{
-		OldPath: location.BasePath,
+		OldPath: StorageBasePath(&location),
 		NewPath: newPath,
 	}
 
@@ -78,7 +89,7 @@ func ServiceGetStorageLocationMoveImpact(id uint, newPath string) (*StorageLocat
 			impact.BackupFiles += len(files)
 			for _, file := range files {
 				impact.TotalSizeBytes += file.SizeBytes
-				if file.LocalPath != "" && strings.HasPrefix(file.LocalPath, location.BasePath) {
+				if file.LocalPath != "" && strings.HasPrefix(file.LocalPath, impact.OldPath) {
 					impact.FilesToMove = append(impact.FilesToMove, file.LocalPath)
 				}
 			}
@@ -134,21 +145,55 @@ func ServiceGetStorageLocationDeletionImpact(id uint) (*DeletionImpact, error) {
 }
 
 // ServiceUpdateStorageLocation updates a storage location and moves files if path changed
-func ServiceUpdateStorageLocation(id uint, input *entity.StorageLocation) (*entity.StorageLocation, error) {
+func ServiceUpdateStorageLocation(id uint, input *entity.StorageLocation, setEnabled bool) (*entity.StorageLocation, error) {
 	var location entity.StorageLocation
 	if err := DB.First(&location, id).Error; err != nil {
 		return nil, err
 	}
 
-	oldBasePath := location.BasePath
-	newBasePath := input.BasePath
+	oldStorageType := NormalizeStorageType(&location)
+	oldBasePath := StorageBasePath(&location)
 
 	if input.Name != "" {
 		location.Name = input.Name
 	}
+	if input.Type != "" {
+		location.Type = input.Type
+	}
+	if input.BasePath != "" {
+		location.BasePath = input.BasePath
+	}
+	if input.Address != "" {
+		location.Address = input.Address
+	}
+	if input.Port != 0 {
+		location.Port = input.Port
+	}
+	if input.RemotePath != "" {
+		location.RemotePath = input.RemotePath
+	}
+	if input.Username != "" {
+		location.Username = input.Username
+	}
+	if input.Password != "" {
+		location.Password = input.Password
+	}
+	if input.SSHKey != "" {
+		location.SSHKey = input.SSHKey
+	}
+	if input.AuthType != "" {
+		location.AuthType = input.AuthType
+	}
+	if setEnabled {
+		location.Enabled = input.Enabled
+	}
+	shouldDisableProfiles := setEnabled && location.Enabled == false
 
-	// If path changed, move files to the new location
-	if newBasePath != "" && newBasePath != oldBasePath {
+	newStorageType := NormalizeStorageType(&location)
+	newBasePath := StorageBasePath(&location)
+
+	// If path changed, move files to the new location (local only)
+	if oldStorageType == storageTypeLocal && newStorageType == storageTypeLocal && newBasePath != "" && newBasePath != oldBasePath {
 		// Track directories that may become empty after moving files
 		dirsToCleanup := make(map[string]bool)
 
@@ -239,11 +284,17 @@ func ServiceUpdateStorageLocation(id uint, input *entity.StorageLocation) (*enti
 		// Also try to remove the old base path itself and its empty parents
 		removeEmptyDirs(oldBasePath)
 
-		location.BasePath = newBasePath
 	}
 
 	if err := DB.Save(&location).Error; err != nil {
 		return nil, err
+	}
+	if shouldDisableProfiles {
+		if err := DB.Model(&entity.BackupProfile{}).
+			Where("storage_location_id = ?", id).
+			Update("enabled", false).Error; err != nil {
+			return nil, err
+		}
 	}
 	return &location, nil
 }

@@ -38,20 +38,25 @@ export function StorageLocationSelector({
         helperText={helperText}
       >
         <MenuItem value="">{placeholder}</MenuItem>
-        {storageLocations.map((location) => (
-          <MenuItem key={location.id} value={location.id}>
+        {storageLocations.map((location) => {
+          const isDisabled = location.enabled === false;
+          const isSelected = location.id === value;
+          return (
+          <MenuItem key={location.id} value={location.id} disabled={isDisabled && !isSelected}>
             {showPath ? (
               <Stack direction="column" spacing={0.25}>
-                <Typography variant="body2">{location.name}</Typography>
+                <Typography variant="body2">
+                  {location.name}{isDisabled ? ' (disabled)' : ''}
+                </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                   {location.base_path}
                 </Typography>
               </Stack>
             ) : (
-              location.name
+              `${location.name}${isDisabled ? ' (disabled)' : ''}`
             )}
           </MenuItem>
-        ))}
+        )})}
       </TextField>
       {showPath && selectedLocation && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, ml: 0.5 }}>

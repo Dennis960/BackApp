@@ -39,7 +39,8 @@ function Servers() {
   const loadServers = async () => {
     try {
       const data = await serverApi.list();
-      setServers(data || []);
+      const sorted = (data || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+      setServers(sorted);
     } catch (error) {
       console.error('Error loading servers:', error);
     } finally {

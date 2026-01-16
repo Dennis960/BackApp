@@ -29,7 +29,8 @@ function BackupProfiles() {
   const loadProfiles = async () => {
     try {
       const data = await backupProfileApi.list();
-      setProfiles(data || []);
+      const sorted = (data || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+      setProfiles(sorted);
     } catch (error) {
       console.error('Error loading profiles:', error);
     } finally {
@@ -44,7 +45,8 @@ function BackupProfiles() {
         storageLocationApi.list(),
         namingRuleApi.list(),
       ]);
-      setServers(serversData || []);
+      const sortedServers = (serversData || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+      setServers(sortedServers);
       setStorageLocations(storageData || []);
       setNamingRules(namingData || []);
     } catch (error) {

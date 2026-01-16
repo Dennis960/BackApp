@@ -24,6 +24,9 @@ func ServiceUpdateFileRule(id uint, input *entity.FileRule) (*entity.FileRule, e
 	}
 	rule.RemotePath = input.RemotePath
 	rule.Recursive = input.Recursive
+	rule.Compress = input.Compress
+	rule.CompressFormat = input.CompressFormat
+	rule.CompressPassword = input.CompressPassword
 	rule.ExcludePattern = input.ExcludePattern
 	if err := DB.Save(&rule).Error; err != nil {
 		return nil, err

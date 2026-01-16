@@ -14,7 +14,9 @@ interface BackupProfileListProps {
 }
 
 function BackupProfileList({ profiles, onRefresh }: BackupProfileListProps) {
-  if (profiles.length === 0) {
+  const sortedProfiles = profiles.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+  if (sortedProfiles.length === 0) {
     return (
       <Card>
         <CardContent>
@@ -38,7 +40,7 @@ function BackupProfileList({ profiles, onRefresh }: BackupProfileListProps) {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          {profiles.map((profile) => (
+          {sortedProfiles.map((profile) => (
             <BackupProfileCard
               key={profile.id}
               profile={profile}

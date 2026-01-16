@@ -65,10 +65,12 @@ func initializeDefaults() {
 			{
 				Name:     "Local Backups",
 				BasePath: "/var/backups/app",
+				Type:     storageTypeLocal,
 			},
 			{
 				Name:     "Archive",
 				BasePath: "/var/backups/archive",
+				Type:     storageTypeLocal,
 			},
 		}
 		for _, loc := range defaultStorageLocations {
@@ -90,6 +92,10 @@ func initializeDefaults() {
 	// Initialize default naming rules if none exist
 	if ruleCount == 0 {
 		defaultNamingRules := []entity.NamingRule{
+			{
+				Name:    "Backup-Format",
+				Pattern: "{YYYY}{MM}{DD}-{profile}",
+			},
 			{
 				Name:    "Date-Time Format",
 				Pattern: "{profile}-{YYYY}-{MM}-{DD}_{HH}-{MM}-{SS}",

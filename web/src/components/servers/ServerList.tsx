@@ -26,7 +26,9 @@ interface ServerListProps {
 }
 
 function ServerList({ servers, testingConnection, onTestConnection, onDeleteServer, onEditServer }: ServerListProps) {
-  if (servers.length === 0) {
+  const sortedServers = servers.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+  if (sortedServers.length === 0) {
     return (
       <Paper data-testid="servers-table-container">
         <Box textAlign="center" py={8} data-testid="no-servers">
@@ -55,7 +57,7 @@ function ServerList({ servers, testingConnection, onTestConnection, onDeleteServ
             </TableRow>
           </TableHead>
           <TableBody>
-            {servers.map((server) => (
+            {sortedServers.map((server) => (
               <TableRow key={server.id} hover data-testid={`server-row-${server.id}`}>
                 <TableCell data-testid="server-name">{server.name}</TableCell>
                 <TableCell data-testid="server-host">

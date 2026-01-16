@@ -57,9 +57,11 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                 </TableRow>
               </TableHead>
               <TableBody>
-                {files.map((file, index) => (
-                  <TableRow key={index} hover sx={file.deleted ? { opacity: 0.6 } : {}}>
-                    <TableCell>
+                {files.map((file, index) => {
+                  const isAvailable = file.available !== false;
+                  return (
+                    <TableRow key={index} hover sx={file.deleted ? { opacity: 0.6 } : {}}>
+                      <TableCell>
                       <Typography
                         variant="body2"
                         fontFamily="monospace"
@@ -87,6 +89,13 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                           size="small"
                           variant="outlined"
                         />
+                      ) : !isAvailable ? (
+                        <Chip
+                          label="Missing"
+                          color="warning"
+                          size="small"
+                          variant="outlined"
+                        />
                       ) : (
                         <Chip
                           label="Available"
@@ -110,6 +119,27 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                               </IconButton>
                             </span>
                           </Tooltip>
+                        ) : !isAvailable ? (
+                          onDeleteFile ? (
+                            <Tooltip title="Delete missing file">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => onDeleteFile(file.id)}
+                                aria-label={`Delete ${file.remote_path || ''}`}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="File missing on storage">
+                              <span>
+                                <IconButton size="small" disabled aria-label="File missing">
+                                  <DownloadIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )
                         ) : (
                           <Tooltip title="Download file">
                             <IconButton
@@ -121,7 +151,7 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                             </IconButton>
                           </Tooltip>
                         )}
-                        {onDeleteFile && !file.deleted && (
+                        {onDeleteFile && !file.deleted && isAvailable && (
                           <Tooltip title="Delete file">
                             <IconButton
                               size="small"
@@ -135,8 +165,9 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                         )}
                       </Box>
                     </TableCell>
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

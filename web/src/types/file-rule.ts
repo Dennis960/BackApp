@@ -3,6 +3,9 @@ export interface FileRule {
   backup_profile_id: number;
   remote_path: string;
   recursive: boolean;
+  compress?: boolean;
+  compress_format?: string;
+  compress_password?: string;
   exclude_pattern?: string;
   created_at: string;
 }
@@ -10,11 +13,17 @@ export interface FileRule {
 export interface FileRuleCreateInput {
   remote_path: string;
   recursive: boolean;
+  compress?: boolean;
+  compress_format?: string;
+  compress_password?: string;
   exclude_pattern?: string;
 }
 
 export interface FileRuleUpdateInput {
   remote_path?: string;
   recursive?: boolean;
+  compress?: boolean;
+  compress_format?: string;
+  compress_password?: string;
   exclude_pattern?: string;
 }

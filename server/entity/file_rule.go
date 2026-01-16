@@ -8,6 +8,9 @@ type FileRule struct {
 	BackupProfileID uint      `gorm:"not null;constraint:OnDelete:CASCADE" json:"backup_profile_id"`
 	RemotePath      string    `gorm:"not null" json:"remote_path"`
 	Recursive       bool      `gorm:"default:true" json:"recursive"`
+	Compress        bool      `gorm:"default:false" json:"compress"`
+	CompressFormat  string    `json:"compress_format,omitempty"`
+	CompressPassword string   `json:"compress_password,omitempty"`
 	ExcludePattern  string    `json:"exclude_pattern,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 }

@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { storageLocationApi } from '../api';
+import { backupProfileApi, storageLocationApi } from '../api';
 import { DestructiveActionDialog, type DestructiveAction } from '../components/common';
 import { StorageLocationDialog, StorageLocationList } from '../components/storage-locations';
 import type { StorageLocation, DeletionImpact, StorageLocationMoveImpact } from '../types';
@@ -20,6 +20,8 @@ function StorageLocations() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingLocation, setEditingLocation] = useState<StorageLocation | null>(null);
+  const [testingConnection, setTestingConnection] = useState<number | null>(null);
+  const [togglingLocation, setTogglingLocation] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -36,7 +38,21 @@ function StorageLocations() {
   // Move confirmation state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveImpact, setMoveImpact] = useState<StorageLocationMoveImpact | null>(null);
-  const [pendingUpdate, setPendingUpdate] = useState<{ id: number; data: { name: string; base_path: string } } | null>(null);
+  const [pendingUpdate, setPendingUpdate] = useState<{
+    id: number;
+    data: {
+      name: string;
+      base_path?: string;
+      type?: StorageLocation['type'];
+      address?: string;
+      port?: number;
+      remote_path?: string;
+      username?: string;
+      password?: string;
+      ssh_key?: string;
+      auth_type?: string;
+    };
+  } | null>(null);
   const [moving, setMoving] = useState(false);
 
   useEffect(() => {
@@ -57,15 +73,27 @@ function StorageLocations() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const portValue = formData.get('port') as string | null;
     const data = {
       name: formData.get('name') as string,
       base_path: formData.get('base_path') as string,
+      type: (formData.get('type') as StorageLocation['type']) || undefined,
+      address: (formData.get('address') as string) || undefined,
+      port: portValue ? Number(portValue) : undefined,
+      remote_path: (formData.get('remote_path') as string) || undefined,
+      username: (formData.get('username') as string) || undefined,
+      password: (formData.get('password') as string) || undefined,
+      auth_type: (formData.get('auth_type') as string) || undefined,
     };
 
     try {
       if (editingLocation) {
-        // Check if path is changing
-        if (data.base_path && data.base_path !== editingLocation.base_path) {
+        const effectiveType = data.type || editingLocation.type || 'local';
+        const isLocal = effectiveType === 'local';
+        const pathChanged = isLocal && data.base_path && data.base_path !== editingLocation.base_path;
+
+        // Check if path is changing (local only)
+        if (pathChanged) {
           // Get move impact
           setLoadingImpact(true);
           const impact = await storageLocationApi.getMoveImpact(editingLocation.id, data.base_path);
@@ -77,10 +105,14 @@ function StorageLocations() {
           return;
         }
         
+        // Only include password if provided
+        if (!data.password) {
+          delete data.password;
+        }
         await storageLocationApi.update(editingLocation.id, data);
         setEditingLocation(null);
       } else {
-        await storageLocationApi.create(data);
+        await storageLocationApi.create(formData);
       }
       setShowForm(false);
       setSnackbar({
@@ -136,6 +168,71 @@ function StorageLocations() {
   const handleEdit = (location: StorageLocation) => {
     setEditingLocation(location);
     setShowForm(true);
+  };
+
+  const handleToggleEnabled = async (location: StorageLocation) => {
+    setTogglingLocation(location.id);
+    try {
+      let affectedProfiles: string[] = [];
+      if (location.enabled !== false) {
+        try {
+          const profiles = await backupProfileApi.list();
+          affectedProfiles = profiles
+            .filter((profile) => profile.storage_location_id === location.id && profile.enabled)
+            .map((profile) => profile.name);
+        } catch (error) {
+          affectedProfiles = [];
+        }
+      }
+      await storageLocationApi.update(location.id, { enabled: location.enabled === false });
+      if (location.enabled !== false) {
+        let profileList = ' No profiles were disabled.';
+        if (affectedProfiles.length > 0) {
+          const preview = affectedProfiles.slice(0, 3);
+          const remaining = affectedProfiles.length - preview.length;
+          profileList = ` Disabled profiles: ${preview.join(', ')}${remaining > 0 ? ` and ${remaining} more` : ''}.`;
+        }
+        setSnackbar({
+          open: true,
+          message: `Storage location disabled.${profileList}`,
+          severity: 'success',
+        });
+      } else {
+      setSnackbar({
+        open: true,
+        message: 'Storage location enabled',
+        severity: 'success',
+      });
+      }
+      loadLocations();
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to update storage location',
+        severity: 'error',
+      });
+    } finally {
+      setTogglingLocation(null);
+    }
+  };
+  const handleTestConnection = async (locationId: number) => {
+    setTestingConnection(locationId);
+    try {
+      const result = await storageLocationApi.testConnection(locationId);
+      setSnackbar({
+        open: true,
+        message: result.message || (result.success ? 'Connection successful!' : 'Connection failed'),
+        severity: result.success ? 'success' : 'error',
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to test connection',
+        severity: 'error',
+      });
+    } finally {
+      setTestingConnection(null);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -290,7 +387,15 @@ function StorageLocations() {
             />
           )}
 
-          <StorageLocationList locations={locations} onDelete={handleDeleteRequest} onEdit={handleEdit} />
+          <StorageLocationList
+            locations={locations}
+            onDelete={handleDeleteRequest}
+            onEdit={handleEdit}
+            testingConnection={testingConnection || togglingLocation}
+            onTestConnection={handleTestConnection}
+            onToggleEnabled={handleToggleEnabled}
+            togglingLocation={togglingLocation}
+          />
         </CardContent>
       </Card>
 

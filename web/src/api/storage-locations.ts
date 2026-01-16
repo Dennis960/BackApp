@@ -7,13 +7,10 @@ export const storageLocationApi = {
     return fetchJSON<StorageLocation[]>('/storage-locations');
   },
 
-  async create(data: StorageLocationCreateInput): Promise<StorageLocation> {
+  async create(formData: FormData): Promise<StorageLocation> {
     return fetchJSON<StorageLocation>('/storage-locations', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+      body: formData,
     });
   },
 
@@ -38,6 +35,12 @@ export const storageLocationApi = {
   async delete(id: number): Promise<boolean> {
     return fetchWithoutResponse(`/storage-locations/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async testConnection(id: number): Promise<{ success: boolean; message: string }> {
+    return fetchJSON<{ success: boolean; message: string }>(`/storage-locations/${id}/test-connection`, {
+      method: 'POST',
     });
   },
 };

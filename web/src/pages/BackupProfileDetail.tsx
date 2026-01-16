@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { backupProfileApi, backupRunApi } from '../api';
+import { backupFileApi, backupProfileApi, backupRunApi } from '../api';
 import BackupFilesTable, { type BackupFileRow, formatFileSize } from '../components/backups/BackupFilesTable';
 import type { BackupProfile, BackupRun } from '../types';
 import { formatDate } from '../utils/format';
@@ -32,6 +32,14 @@ function BackupProfileDetail() {
   const [files, setFiles] = useState<BackupFileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/backup-profiles');
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -72,6 +80,17 @@ function BackupProfileDetail() {
     }
   };
 
+  const handleDeleteFile = async (fileId: number) => {
+    if (!id) return;
+    if (!confirm('Delete this backup file?')) return;
+    try {
+      await backupFileApi.delete(fileId);
+      await loadProfileAndFiles(parseInt(id, 10));
+    } catch (err) {
+      console.error('Failed to delete backup file', err);
+    }
+  };
+
   const totalSize = useMemo(
     () => files.reduce((acc, f) => acc + (f.size_bytes || f.file_size || 0), 0),
     [files]
@@ -88,8 +107,8 @@ function BackupProfileDetail() {
   if (error || !profile) {
     return (
       <Box>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/backup-profiles')} sx={{ mb: 2 }}>
-          Back to Backup Profiles
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mb: 2 }}>
+          Back
         </Button>
         <Alert severity="error">{error || 'Backup profile not found'}</Alert>
       </Box>
@@ -99,7 +118,7 @@ function BackupProfileDetail() {
   return (
     <Box>
       <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/backup-profiles')}>
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack}>
           Back
         </Button>
         <Typography variant="h4" component="h3" fontWeight={700}>
@@ -188,6 +207,8 @@ function BackupProfileDetail() {
         title="Backup Files"
         groupByRun={true}
         initialLimit={10}
+        showStatus={true}
+        onDeleteFile={handleDeleteFile}
         emptyMessage="No backup files found for this profile."
       />
     </Box>

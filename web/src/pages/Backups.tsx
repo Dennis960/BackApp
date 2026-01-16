@@ -62,6 +62,9 @@ export default function Backups() {
     setFilesByProfile(Object.fromEntries(filesEntries));
   };
 
+  const sortProfiles = (items: BackupProfile[]) =>
+    [...items].sort((a, b) => a.name.localeCompare(b.name));
+
   const loadInitial = async () => {
     try {
       setLoading(true);
@@ -70,12 +73,13 @@ export default function Backups() {
         storageLocationApi.list(),
       ]);
 
-      setProfiles(profilesData || []);
+      const sortedProfiles = sortProfiles(profilesData || []);
+      setProfiles(sortedProfiles);
       const locMap = Object.fromEntries((locationsData || []).map((l) => [l.id, l]));
       setLocations(locMap);
 
       // Load files for each profile
-      await loadProfileFiles(profilesData || []);
+      await loadProfileFiles(sortedProfiles);
 
       setError(null);
     } catch (err) {

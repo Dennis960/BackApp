@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sort"
 	"time"
@@ -50,6 +49,9 @@ func (e *BackupExecutor) ExecuteBackup(profileID uint, allowDisabled bool) error
 	// Check if profile is enabled (unless manually allowed)
 	if !profile.Enabled && !allowDisabled {
 		return fmt.Errorf("backup profile is disabled")
+	}
+	if profile.StorageLocation != nil && !profile.StorageLocation.Enabled {
+		return fmt.Errorf("storage location is disabled")
 	}
 
 	// Create backup run record
@@ -135,25 +137,36 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 
 	// Generate backup directory name using naming rule
 	backupDirName := e.generateBackupName(profile)
-	backupDir := filepath.Join(profile.StorageLocation.BasePath, backupDirName)
+	backupBasePath := StorageBasePath(profile.StorageLocation)
+	backupDir := JoinStoragePath(profile.StorageLocation, backupBasePath, backupDirName)
 	e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Backup directory: %s", backupDir))
 
+	storageBackend, err := NewStorageBackend(profile.StorageLocation)
+	if err != nil {
+		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to initialize storage backend: %v", err))
+		return fmt.Errorf("failed to initialize storage backend: %v", err)
+	}
+	defer storageBackend.Close()
+
 	// Create backup directory
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := storageBackend.EnsureDir(backupDir); err != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to create backup directory: %v", err))
 		return fmt.Errorf("failed to create backup directory: %v", err)
 	}
-	absBackupDir, absErr := filepath.Abs(backupDir)
-	if absErr != nil {
-		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to get absolute path of backup directory: %v", absErr))
-	} else {
-		e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Absolute backup directory path: %s", absBackupDir))
+	if storageBackend.IsLocal() {
+		absBackupDir, absErr := filepath.Abs(backupDir)
+		if absErr != nil {
+			e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to get absolute path of backup directory: %v", absErr))
+		} else {
+			e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Absolute backup directory path: %s", absBackupDir))
+		}
 	}
 	e.logToDatabase(run.ID, "INFO", "Backup directory created")
+	run.LocalBackupPath = backupDir
 
 	// Transfer files
 	e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Starting file transfer (%d rules)", len(profile.FileRules)))
-	transferService := NewFileTransferService(sshClient, backupDir, run.ID)
+	transferService := NewFileTransferService(sshClient, storageBackend, backupDir, run.ID)
 	backupFiles, err := transferService.TransferFiles(profile.FileRules)
 	if err != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("File transfer failed: %v", err))

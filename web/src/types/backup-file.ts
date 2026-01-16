@@ -7,6 +7,7 @@ export interface BackupFile {
   file_size?: number;
   checksum?: string;
   deleted?: boolean;
+  available?: boolean;
   deleted_at?: string;
   created_at: string;
 }

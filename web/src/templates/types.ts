@@ -142,6 +142,7 @@ export interface CommandResult {
 export interface FileRuleResult {
   remote_path: string;
   recursive?: boolean;
+  compress_format?: string;
   exclude_pattern?: string;
 }
 
