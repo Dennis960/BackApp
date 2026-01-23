@@ -31,6 +31,10 @@ BackApp supports the following command-line flags:
 - `-port` - Port to run the server on (default: `8080`)
 - `-db` - SQLite database path (default: `/data/app.db`)
 
+### Environment Variables
+
+- `TZ` - Set the timezone for the application (e.g., `Asia/Bangkok`, `America/New_York`, `Europe/London`). This affects all timestamps in logs, backup runs, and naming rules. If not set, the system default timezone (typically UTC in Docker) is used.
+
 Examples:
 ```bash
 # Run on a different port
@@ -41,6 +45,9 @@ Examples:
 
 # Combine multiple flags
 ./backapp -port=9090 -db=/custom/path/app.db
+
+# Set timezone using environment variable
+TZ=Asia/Bangkok ./backapp
 ```
 
 ## Quick start

@@ -6,6 +6,9 @@ services:
       - "8080:8080"
     command: [ "-port=8080" ]
     restart: unless-stopped
+    # Optionally set timezone using TZ environment variable
+    # environment:
+    #   - TZ=Asia/Bangkok
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
       interval: 30s
