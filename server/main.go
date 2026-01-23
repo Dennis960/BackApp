@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"backapp-server/config"
 	"backapp-server/controller"
@@ -36,6 +38,17 @@ func CORSMiddleware() gin.HandlerFunc {
 var embeddedStaticFiles embed.FS
 
 func main() {
+	// Load timezone from TZ environment variable
+	if tzEnv := os.Getenv("TZ"); tzEnv != "" {
+		loc, err := time.LoadLocation(tzEnv)
+		if err != nil {
+			log.Printf("Warning: Failed to load timezone '%s': %v. Using system default.", tzEnv, err)
+		} else {
+			time.Local = loc
+			log.Printf("Timezone set to: %s", tzEnv)
+		}
+	}
+
 	// Parse command line flags
 	port := flag.Int("port", 8080, "Port to run the server on")
 	dbPath := flag.String("db", "./app.db", "SQLite database path")
