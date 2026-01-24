@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   Collapse,
   IconButton,
   Link,
@@ -39,6 +40,7 @@ interface BackupFilesTableProps {
   title?: string;
   showRunColumn?: boolean;
   emptyMessage?: string;
+  showStatus?: boolean;
   /** Group files by run and collapse runs with multiple files */
   groupByRun?: boolean;
   /** Maximum number of files/runs to show initially (0 = show all) */
@@ -86,13 +88,18 @@ function groupFilesByRun(files: BackupFileRow[]): RunGroup[] {
 function RunGroupRow({
   group,
   onDownload,
+  showStatus,
 }: {
   group: RunGroup;
   onDownload: (fileId: number, filePath: string) => void;
+  showStatus?: boolean;
 }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(group.files.length === 1);
   const hasMultipleFiles = group.files.length > 1;
+  const singleFile = group.files[0];
+  const isSingleAvailable = singleFile?.available !== false;
+  const isSingleDeleted = singleFile?.deleted;
 
   return (
     <>
@@ -140,25 +147,42 @@ function RunGroupRow({
         </TableCell>
         <TableCell align="right">{formatFileSize(group.totalSize)}</TableCell>
         <TableCell>{formatDate(group.runStartedAt)}</TableCell>
+        {showStatus && (
+          <TableCell>
+            {!hasMultipleFiles && (
+              isSingleDeleted ? (
+                <Chip label="Deleted" color="error" size="small" variant="outlined" />
+              ) : !isSingleAvailable ? (
+                <Chip label="Moved" color="warning" size="small" variant="outlined" />
+              ) : (
+                <Chip label="Available" color="success" size="small" variant="outlined" />
+              )
+            )}
+          </TableCell>
+        )}
         <TableCell align="right">
           {!hasMultipleFiles && (
-            <Tooltip title="Download file">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDownload(group.files[0].id, group.files[0].remote_path || group.files[0].local_path);
-                }}
-              >
-                <DownloadIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+              {isSingleDeleted || !isSingleAvailable ? null : (
+                <Tooltip title="Download file">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload(singleFile.id, singleFile.remote_path || singleFile.local_path);
+                    }}
+                  >
+                    <DownloadIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
           )}
         </TableCell>
       </TableRow>
       {hasMultipleFiles && (
         <TableRow>
-          <TableCell colSpan={6} sx={{ p: 0, borderBottom: expanded ? undefined : 'none' }}>
+          <TableCell colSpan={showStatus ? 7 : 6} sx={{ p: 0, borderBottom: expanded ? undefined : 'none' }}>
             <Collapse in={expanded} timeout="auto" unmountOnExit>
               <Box sx={{ pl: 6, pr: 2, py: 1, bgcolor: 'action.hover' }}>
                 <Table size="small">
@@ -173,15 +197,30 @@ function RunGroupRow({
                         <TableCell align="right" sx={{ border: 'none', py: 0.5, width: 80 }}>
                           {formatFileSize(file.size_bytes || file.file_size)}
                         </TableCell>
+                        {showStatus && (
+                          <TableCell sx={{ border: 'none', py: 0.5, width: 110 }}>
+                            {file.deleted ? (
+                              <Chip label="Deleted" color="error" size="small" variant="outlined" />
+                            ) : file.available === false ? (
+                              <Chip label="Moved" color="warning" size="small" variant="outlined" />
+                            ) : (
+                              <Chip label="Available" color="success" size="small" variant="outlined" />
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell align="right" sx={{ border: 'none', py: 0.5, width: 40 }}>
-                          <Tooltip title="Download file">
-                            <IconButton
-                              size="small"
-                              onClick={() => onDownload(file.id, file.remote_path || file.local_path)}
-                            >
-                              <DownloadIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                            {file.deleted || file.available === false ? null : (
+                              <Tooltip title="Download file">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => onDownload(file.id, file.remote_path || file.local_path)}
+                                >
+                                  <DownloadIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -201,6 +240,7 @@ function BackupFilesTable({
   title = 'Backup Files',
   showRunColumn = true,
   emptyMessage = 'No backup files found.',
+  showStatus = false,
   groupByRun = false,
   initialLimit = 0,
 }: BackupFilesTableProps) {
@@ -252,25 +292,27 @@ function BackupFilesTable({
             <>
               <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ width: 40 }} />
-                      <TableCell>Run</TableCell>
-                      <TableCell>Path</TableCell>
-                      <TableCell align="right">Size</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell align="right" sx={{ width: 60 }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {displayedGroups.map((group) => (
-                      <RunGroupRow
-                        key={group.runId}
-                        group={group}
-                        onDownload={handleDownloadFile}
-                      />
-                    ))}
-                  </TableBody>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: 40 }} />
+                    <TableCell>Run</TableCell>
+                    <TableCell>Path</TableCell>
+                    <TableCell align="right">Size</TableCell>
+                    <TableCell>Date</TableCell>
+                    {showStatus && <TableCell>Status</TableCell>}
+                    <TableCell align="right" sx={{ width: 60 }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {displayedGroups.map((group) => (
+                    <RunGroupRow
+                      key={group.runId}
+                      group={group}
+                      onDownload={handleDownloadFile}
+                      showStatus={showStatus}
+                    />
+                  ))}
+                </TableBody>
                 </Table>
               </TableContainer>
               {hiddenCount > 0 && (
@@ -321,6 +363,7 @@ function BackupFilesTable({
                     <TableCell>Local Path</TableCell>
                     <TableCell align="right">Size</TableCell>
                     <TableCell>Created</TableCell>
+                    {showStatus && <TableCell>Status</TableCell>}
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -349,12 +392,27 @@ function BackupFilesTable({
                       </TableCell>
                       <TableCell align="right">{formatFileSize(file.size_bytes || file.file_size)}</TableCell>
                       <TableCell>{formatDate(file.created_at)}</TableCell>
+                      {showStatus && (
+                        <TableCell>
+                          {file.deleted ? (
+                            <Chip label="Deleted" color="error" size="small" variant="outlined" />
+                          ) : file.available === false ? (
+                            <Chip label="Moved" color="warning" size="small" variant="outlined" />
+                          ) : (
+                            <Chip label="Available" color="success" size="small" variant="outlined" />
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell align="right">
-                        <Tooltip title="Download file">
-                          <IconButton size="small" onClick={() => handleDownloadFile(file.id, file.remote_path || file.local_path)}>
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                          {file.deleted || file.available === false ? null : (
+                            <Tooltip title="Download file">
+                              <IconButton size="small" onClick={() => handleDownloadFile(file.id, file.remote_path || file.local_path)}>
+                                <DownloadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}

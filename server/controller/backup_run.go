@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -134,14 +133,38 @@ func handleBackupFileDownload(c *gin.Context) {
 		return
 	}
 
-	// Check if file exists on disk
-	if _, err := os.Stat(file.LocalPath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "file not found on disk"})
+	location, err := service.GetStorageLocationForRun(file.BackupRunID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve storage location"})
+		return
+	}
+	backend, err := service.NewStorageBackend(location)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open storage backend"})
+		return
+	}
+	defer backend.Close()
+
+	reader, err := backend.OpenReader(file.LocalPath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found on storage"})
+		return
+	}
+	defer reader.Close()
+
+	fileInfo, err := backend.Stat(file.LocalPath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found on storage"})
 		return
 	}
 
-	// Serve the file for download
-	c.FileAttachment(file.LocalPath, filepath.Base(file.RemotePath))
+	c.DataFromReader(
+		http.StatusOK,
+		fileInfo.Size(),
+		"application/octet-stream",
+		reader,
+		map[string]string{"Content-Disposition": "attachment; filename=" + filepath.Base(file.RemotePath)},
+	)
 }
 
 func handleBackupFileDelete(c *gin.Context) {

@@ -33,6 +33,7 @@ func SetupRouter(r *gin.Engine) {
 		api.DELETE("/storage-locations/:id", handleStorageLocationDelete)
 		api.GET("/storage-locations/:id/move-impact", handleStorageLocationMoveImpact)
 		api.GET("/storage-locations/:id/deletion-impact", handleStorageLocationDeletionImpact)
+		api.POST("/storage-locations/:id/test-connection", handleStorageLocationTestConnection)
 		api.GET("/local-files", handleLocalFilesList)
 
 		api.GET("/naming-rules", handleNamingRulesList)
@@ -69,7 +70,6 @@ func SetupRouter(r *gin.Engine) {
 		api.DELETE("/backup-runs/:id", handleBackupRunDelete)
 		api.GET("/backup-files/:fileId", handleBackupFileGet)
 		api.GET("/backup-files/:fileId/download", handleBackupFileDownload)
-		api.DELETE("/backup-files/:fileId", handleBackupFileDelete)
 
 		// Push notifications
 		api.GET("/notifications/vapid-key", handleGetVAPIDPublicKey)

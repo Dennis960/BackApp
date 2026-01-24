@@ -23,6 +23,8 @@ export function StorageWidget({ compact = false }: StorageWidgetProps) {
 
   useEffect(() => {
     loadUsage();
+    const intervalId = window.setInterval(loadUsage, 30000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const loadUsage = async () => {
@@ -178,12 +180,12 @@ export function StorageWidget({ compact = false }: StorageWidgetProps) {
                     {loc.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {formatBytes(loc.backup_size_bytes)}
+                    {loc.enabled ? formatBytes(loc.backup_size_bytes) : 'Disabled'}
                   </Typography>
                 </Box>
                 <LinearProgress
                   variant="determinate"
-                  value={loc.total_bytes > 0 ? loc.used_percent : 0}
+                  value={loc.total_bytes > 0 && loc.enabled ? loc.used_percent : 0}
                   color={getProgressColor(loc.used_percent)}
                   sx={{ height: 4, borderRadius: 2 }}
                 />

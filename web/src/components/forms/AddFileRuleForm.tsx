@@ -18,6 +18,8 @@ interface AddFileRuleFormProps {
 }
 
 function AddFileRuleForm({ formData, onFormDataChange, onAdd, serverId, onCancel }: AddFileRuleFormProps) {
+  const trimmedPath = formData.remote_path.trim();
+
   return (
     <>
       <Card sx={{ mb: 2, backgroundColor: '#f5f5f5' }}>
@@ -62,7 +64,7 @@ function AddFileRuleForm({ formData, onFormDataChange, onAdd, serverId, onCancel
                 <Button
                   onClick={onAdd}
                   variant="contained"
-                  disabled={!formData.remote_path.trim()}
+                  disabled={!trimmedPath}
                   size="small"
                 >
                   Add

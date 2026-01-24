@@ -401,7 +401,6 @@ function BackupRunDetail() {
           files={files}
           formatSize={formatSize}
           onDownload={handleDownloadFile}
-          onDeleteFile={handleDeleteFileRequest}
         />
       </Box>
 

@@ -20,6 +20,13 @@ func ServiceListBackupProfiles() ([]entity.BackupProfile, error) {
 		Find(&profiles).Error; err != nil {
 		return nil, err
 	}
+	for i := range profiles {
+		if profiles[i].StorageLocation != nil {
+			if err := hydrateStorageLocation(profiles[i].StorageLocation); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return profiles, nil
 }
 
@@ -137,6 +144,11 @@ func ServiceGetBackupProfileFull(id uint) (*entity.BackupProfile, error) {
 		Preload("FileRules").
 		First(&profile, id).Error; err != nil {
 		return nil, err
+	}
+	if profile.StorageLocation != nil {
+		if err := hydrateStorageLocation(profile.StorageLocation); err != nil {
+			return nil, err
+		}
 	}
 	if profile.Server != nil {
 		profile.Server = sanitizeServer(profile.Server)

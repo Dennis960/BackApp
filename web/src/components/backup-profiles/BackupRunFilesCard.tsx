@@ -1,4 +1,3 @@
-import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import FolderIcon from '@mui/icons-material/Folder';
 import {
@@ -24,10 +23,9 @@ interface BackupRunFilesCardProps {
   files: BackupFile[];
   formatSize: (bytes: number) => string;
   onDownload: (fileId: number, filePath: string) => void;
-  onDeleteFile?: (fileId: number) => void;
 }
 
-function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: BackupRunFilesCardProps) {
+function BackupRunFilesCard({ files, formatSize, onDownload }: BackupRunFilesCardProps) {
   return (
     <Card>
       <CardContent>
@@ -57,9 +55,11 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                 </TableRow>
               </TableHead>
               <TableBody>
-                {files.map((file, index) => (
-                  <TableRow key={index} hover sx={file.deleted ? { opacity: 0.6 } : {}}>
-                    <TableCell>
+                {files.map((file, index) => {
+                  const isAvailable = file.available !== false;
+                  return (
+                    <TableRow key={index} hover sx={file.deleted ? { opacity: 0.6 } : {}}>
+                      <TableCell>
                       <Typography
                         variant="body2"
                         fontFamily="monospace"
@@ -84,6 +84,13 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                         <Chip
                           label="Deleted"
                           color="error"
+                          size="small"
+                          variant="outlined"
+                        />
+                      ) : !isAvailable ? (
+                        <Chip
+                          label="Moved"
+                          color="warning"
                           size="small"
                           variant="outlined"
                         />
@@ -121,22 +128,11 @@ function BackupRunFilesCard({ files, formatSize, onDownload, onDeleteFile }: Bac
                             </IconButton>
                           </Tooltip>
                         )}
-                        {onDeleteFile && !file.deleted && (
-                          <Tooltip title="Delete file">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => onDeleteFile(file.id)}
-                              aria-label={`Delete ${file.remote_path || ''}`}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
                       </Box>
                     </TableCell>
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
