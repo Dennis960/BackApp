@@ -61,9 +61,6 @@ func ServiceListBackupFilesForRun(runID uint) ([]entity.BackupFile, error) {
 	defer backend.Close()
 
 	for i := range files {
-		if files[i].Deleted {
-			continue
-		}
 		available := files[i].LocalPath != ""
 		if available {
 			if _, err := backend.Stat(files[i].LocalPath); err != nil {

@@ -127,12 +127,6 @@ func handleBackupFileDownload(c *gin.Context) {
 		return
 	}
 
-	// Check if file is marked as deleted
-	if file.Deleted {
-		c.JSON(http.StatusGone, gin.H{"error": "file has been deleted", "deleted": true})
-		return
-	}
-
 	location, err := service.GetStorageLocationForRun(file.BackupRunID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve storage location"})

@@ -327,11 +327,6 @@ func ServiceUpdateStorageLocation(id uint, input *entity.StorageLocation, setEna
 				}
 
 				for _, file := range files {
-					// Skip files that have been deleted - they don't exist on disk anymore
-					if file.Deleted {
-						continue
-					}
-
 					if file.LocalPath != "" && strings.HasPrefix(file.LocalPath, oldBasePath) {
 						// Check if file actually exists on disk before trying to move it
 						if _, err := os.Stat(file.LocalPath); os.IsNotExist(err) {

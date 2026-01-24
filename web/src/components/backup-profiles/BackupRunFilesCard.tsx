@@ -105,19 +105,7 @@ function BackupRunFilesCard({ files, formatSize, onDownload }: BackupRunFilesCar
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                        {file.deleted ? (
-                          <Tooltip title="File has been deleted">
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled
-                                aria-label="File deleted"
-                              >
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        ) : (
+                        {file.deleted || !isAvailable ? null :  (
                           <Tooltip title="Download file">
                             <IconButton
                               size="small"
