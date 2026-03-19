@@ -2,7 +2,6 @@ package service
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 
 	"backapp-server/entity"
@@ -47,6 +46,29 @@ func ServiceListBackupFilesForRun(runID uint) ([]entity.BackupFile, error) {
 	if err := DB.Where("backup_run_id = ?", runID).Find(&files).Error; err != nil {
 		return nil, err
 	}
+	if len(files) == 0 {
+		return files, nil
+	}
+
+	location, err := GetStorageLocationForRun(runID)
+	if err != nil {
+		return files, nil
+	}
+	backend, err := NewStorageBackend(location)
+	if err != nil {
+		return files, nil
+	}
+	defer backend.Close()
+
+	for i := range files {
+		available := files[i].LocalPath != ""
+		if available {
+			if _, err := backend.Stat(files[i].LocalPath); err != nil {
+				available = false
+			}
+		}
+		files[i].Available = &available
+	}
 	return files, nil
 }
 
@@ -65,15 +87,19 @@ func ServiceDeleteBackupFile(fileID uint) error {
 		return err
 	}
 
-	// Delete the file from disk if it exists
+	location, err := GetStorageLocationForRun(file.BackupRunID)
+	if err != nil {
+		return err
+	}
+	backend, err := NewStorageBackend(location)
+	if err != nil {
+		return err
+	}
+	defer backend.Close()
+
+	// Delete the file from storage if it exists
 	if file.LocalPath != "" {
-		parentDir := filepath.Dir(file.LocalPath)
-		if err := os.Remove(file.LocalPath); err != nil && !os.IsNotExist(err) {
-			// Log but continue - we still want to mark it as deleted
-		} else {
-			// Clean up empty parent directories
-			removeEmptyDirs(parentDir)
-		}
+		_ = backend.RemoveWithCleanup(file.LocalPath)
 	}
 
 	// Mark as deleted
@@ -91,26 +117,27 @@ func ServiceDeleteBackupRun(runID uint) error {
 		return err
 	}
 
+	location, err := GetStorageLocationForRun(runID)
+	if err != nil {
+		return err
+	}
+	backend, err := NewStorageBackend(location)
+	if err != nil {
+		return err
+	}
+	defer backend.Close()
+
 	// Get all backup files for this run to delete from disk
 	var files []entity.BackupFile
 	if err := DB.Where("backup_run_id = ?", runID).Find(&files).Error; err != nil {
 		return err
 	}
 
-	// Track directories for cleanup
-	dirsToCleanup := make(map[string]bool)
-
 	// Delete files from disk
 	for _, file := range files {
 		if file.LocalPath != "" {
-			dirsToCleanup[filepath.Dir(file.LocalPath)] = true
-			os.Remove(file.LocalPath) // Ignore errors, best effort cleanup
+			_ = backend.RemoveWithCleanup(file.LocalPath)
 		}
-	}
-
-	// Clean up empty directories
-	for dir := range dirsToCleanup {
-		removeEmptyDirs(dir)
 	}
 
 	// Delete dependent records: logs and files
@@ -163,4 +190,23 @@ func ServiceGetBackupRunDeletionImpact(runID uint) (*DeletionImpact, error) {
 	}
 
 	return impact, nil
+}
+
+func GetStorageLocationForRun(runID uint) (*entity.StorageLocation, error) {
+	var run entity.BackupRun
+	if err := DB.First(&run, runID).Error; err != nil {
+		return nil, err
+	}
+
+	var profile entity.BackupProfile
+	if err := DB.Preload("StorageLocation").First(&profile, run.BackupProfileID).Error; err != nil {
+		return nil, err
+	}
+	if profile.StorageLocation == nil {
+		return nil, os.ErrNotExist
+	}
+	if err := hydrateStorageLocation(profile.StorageLocation); err != nil {
+		return nil, err
+	}
+	return profile.StorageLocation, nil
 }

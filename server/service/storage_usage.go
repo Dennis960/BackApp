@@ -3,10 +3,16 @@ package service
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"backapp-server/entity"
 )
+
+type diskUsage struct {
+	Total int64
+	Free  int64
+	Used  int64
+	Ok    bool
+}
 
 // GetStorageUsage returns storage usage information for all storage locations
 func GetStorageUsage() (*entity.TotalStorageUsage, error) {
@@ -23,32 +29,62 @@ func GetStorageUsage() (*entity.TotalStorageUsage, error) {
 		usage := entity.StorageUsage{
 			StorageLocationID: loc.ID,
 			Name:              loc.Name,
-			BasePath:          loc.BasePath,
+			BasePath:          StorageBasePath(&loc),
+			Enabled:           loc.Enabled,
 		}
 
-		// Get filesystem stats
-		var stat syscall.Statfs_t
-		if err := syscall.Statfs(loc.BasePath, &stat); err == nil {
-			usage.TotalBytes = int64(stat.Blocks) * int64(stat.Bsize)
-			usage.FreeBytes = int64(stat.Bavail) * int64(stat.Bsize)
-			usage.UsedBytes = usage.TotalBytes - usage.FreeBytes
+		if !loc.Enabled {
+			result.Locations = append(result.Locations, usage)
+			continue
+		}
 
-			if usage.TotalBytes > 0 {
-				usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
-				usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+		storageType := NormalizeStorageType(&loc)
+		if storageType == storageTypeLocal {
+			if disk, err := getDiskUsage(loc.BasePath); err == nil && disk.Ok {
+				usage.TotalBytes = disk.Total
+				usage.FreeBytes = disk.Free
+				usage.UsedBytes = disk.Used
+
+				if usage.TotalBytes > 0 {
+					usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
+					usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+				}
+
+				result.TotalBytes += usage.TotalBytes
+				result.FreeBytes += usage.FreeBytes
+				result.UsedBytes += usage.UsedBytes
 			}
-
-			result.TotalBytes += usage.TotalBytes
-			result.FreeBytes += usage.FreeBytes
-			result.UsedBytes += usage.UsedBytes
 		}
 
-		// Calculate backup size for this location
-		backupSize, backupCount := calculateBackupSize(loc.BasePath)
-		usage.BackupSizeBytes = backupSize
-		usage.BackupCount = backupCount
-		result.TotalBackupSize += backupSize
-		result.TotalBackups += backupCount
+		if storageType == storageTypeLocal {
+			// Calculate backup size for this location
+			backupSize, backupCount := calculateBackupSize(loc.BasePath)
+			usage.BackupSizeBytes = backupSize
+			usage.BackupCount = backupCount
+			result.TotalBackupSize += backupSize
+			result.TotalBackups += backupCount
+		} else if storageType == storageTypeSFTP {
+			if backupSize, backupCount, err := getSFTPBackupSize(&loc); err == nil {
+				usage.BackupSizeBytes = backupSize
+				usage.BackupCount = backupCount
+				result.TotalBackupSize += backupSize
+				result.TotalBackups += backupCount
+			}
+			if disk, err := getSFTPDiskUsage(&loc); err == nil && disk.Ok {
+				usage.TotalBytes = disk.Total
+				usage.FreeBytes = disk.Free
+				usage.UsedBytes = disk.Used
+
+				if usage.TotalBytes > 0 {
+					usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
+					usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+				}
+
+				result.TotalBytes += usage.TotalBytes
+				result.FreeBytes += usage.FreeBytes
+				result.UsedBytes += usage.UsedBytes
+			}
+		}
 
 		result.Locations = append(result.Locations, usage)
 	}
@@ -72,24 +108,47 @@ func GetStorageLocationUsage(locationID uint) (*entity.StorageUsage, error) {
 	usage := &entity.StorageUsage{
 		StorageLocationID: loc.ID,
 		Name:              loc.Name,
-		BasePath:          loc.BasePath,
+		BasePath:          StorageBasePath(&loc),
+		Enabled:           loc.Enabled,
 	}
 
-	// Get filesystem stats
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs(loc.BasePath, &stat); err == nil {
-		usage.TotalBytes = int64(stat.Blocks) * int64(stat.Bsize)
-		usage.FreeBytes = int64(stat.Bavail) * int64(stat.Bsize)
-		usage.UsedBytes = usage.TotalBytes - usage.FreeBytes
+	if !loc.Enabled {
+		return usage, nil
+	}
 
-		if usage.TotalBytes > 0 {
-			usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
-			usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+	storageType := NormalizeStorageType(&loc)
+	if storageType == storageTypeLocal {
+		if disk, err := getDiskUsage(loc.BasePath); err == nil && disk.Ok {
+			usage.TotalBytes = disk.Total
+			usage.FreeBytes = disk.Free
+			usage.UsedBytes = disk.Used
+
+			if usage.TotalBytes > 0 {
+				usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
+				usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+			}
 		}
 	}
 
-	// Calculate backup size
-	usage.BackupSizeBytes, usage.BackupCount = calculateBackupSize(loc.BasePath)
+	if storageType == storageTypeLocal {
+		// Calculate backup size
+		usage.BackupSizeBytes, usage.BackupCount = calculateBackupSize(loc.BasePath)
+	} else if storageType == storageTypeSFTP {
+		if backupSize, backupCount, err := getSFTPBackupSize(&loc); err == nil {
+			usage.BackupSizeBytes = backupSize
+			usage.BackupCount = backupCount
+		}
+		if disk, err := getSFTPDiskUsage(&loc); err == nil && disk.Ok {
+			usage.TotalBytes = disk.Total
+			usage.FreeBytes = disk.Free
+			usage.UsedBytes = disk.Used
+
+			if usage.TotalBytes > 0 {
+				usage.UsedPercent = float64(usage.UsedBytes) / float64(usage.TotalBytes) * 100
+				usage.FreePercent = float64(usage.FreeBytes) / float64(usage.TotalBytes) * 100
+			}
+		}
+	}
 
 	return usage, nil
 }

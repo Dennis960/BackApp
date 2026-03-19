@@ -26,18 +26,9 @@ func NewSSHClient(server *entity.Server) (*SSHClient, error) {
 
 	switch server.AuthType {
 	case "key":
-		var keyData []byte
-		var err error
-
-		// Try reading as file first
-		if stat, statErr := os.Stat(server.PrivateKeyPath); statErr == nil && !stat.IsDir() {
-			keyData, err = os.ReadFile(server.PrivateKeyPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read private key file: %v", err)
-			}
-		} else {
-			// Treat as key content
-			keyData = []byte(server.PrivateKeyPath)
+		keyData, err := readPrivateKeyData(server.PrivateKeyPath)
+		if err != nil {
+			return nil, err
 		}
 
 		signer, err := ssh.ParsePrivateKey(keyData)
@@ -131,6 +122,34 @@ func (c *SSHClient) CopyFileFromRemote(remotePath, localPath string) error {
 
 	log.Printf("Cat method failed: %v, falling back to SCP", err)
 	return c.copyFileUsingSCP(remotePath, localPath)
+}
+
+// CopyFileFromRemoteToWriter streams a remote file into a writer.
+func (c *SSHClient) CopyFileFromRemoteToWriter(remotePath string, writer io.Writer) error {
+	session, err := c.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("failed to create session: %v", err)
+	}
+	defer session.Close()
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get stdout pipe: %v", err)
+	}
+
+	if err := session.Start(fmt.Sprintf("cat '%s'", remotePath)); err != nil {
+		return fmt.Errorf("failed to start cat: %v", err)
+	}
+
+	if _, err := io.Copy(writer, stdout); err != nil {
+		return fmt.Errorf("failed to copy file content: %v", err)
+	}
+
+	if err := session.Wait(); err != nil {
+		return fmt.Errorf("cat command failed: %v", err)
+	}
+
+	return nil
 }
 
 // copyFileUsingCat downloads a file using cat (simpler and more reliable)

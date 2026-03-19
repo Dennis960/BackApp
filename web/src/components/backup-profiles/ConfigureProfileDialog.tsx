@@ -4,12 +4,10 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   Chip,
   Dialog,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   MenuItem,
   Stack,
@@ -22,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { commandApi, fileRuleApi } from '../../api';
 import type { Command, FileRule } from '../../types';
 import { TabPanel } from '../common';
+import AddFileRuleForm from '../forms/AddFileRuleForm';
 
 interface ConfigureProfileDialogProps {
   open: boolean;
@@ -35,6 +34,11 @@ function ConfigureProfileDialog({ open, profileId, onClose }: ConfigureProfileDi
   const [fileRules, setFileRules] = useState<FileRule[]>([]);
   const [showCommandForm, setShowCommandForm] = useState(false);
   const [showFileRuleForm, setShowFileRuleForm] = useState(false);
+  const [newFileRule, setNewFileRule] = useState({
+    remote_path: '',
+    recursive: true,
+    exclude_pattern: '',
+  });
 
   useEffect(() => {
     if (open) {
@@ -90,20 +94,24 @@ function ConfigureProfileDialog({ open, profileId, onClose }: ConfigureProfileDi
     }
   };
 
-  const handleAddFileRule = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleAddFileRule = async () => {
+    const trimmedPath = newFileRule.remote_path.trim();
+    if (!trimmedPath) return;
     const data = {
-      remote_path: formData.get('remote_path') as string,
-      recursive: formData.get('recursive') === 'on',
-      exclude_pattern: formData.get('exclude_pattern') as string || undefined,
+      remote_path: trimmedPath,
+      recursive: newFileRule.recursive,
+      exclude_pattern: newFileRule.exclude_pattern.trim() || undefined,
     };
 
     try {
       await fileRuleApi.create(profileId, data);
       setShowFileRuleForm(false);
       loadFileRules();
-      e.currentTarget.reset();
+      setNewFileRule({
+        remote_path: '',
+        recursive: true,
+        exclude_pattern: '',
+      });
     } catch (error) {
       console.error('Error creating file rule:', error);
     }
@@ -246,40 +254,12 @@ function ConfigureProfileDialog({ open, profileId, onClose }: ConfigureProfileDi
           </Box>
 
           {showFileRuleForm && (
-            <Card variant="outlined" sx={{ mb: 2 }}>
-              <CardContent>
-                <form onSubmit={handleAddFileRule}>
-                  <Stack spacing={2}>
-                    <TextField
-                      name="remote_path"
-                      label="Remote Path"
-                      required
-                      fullWidth
-                      placeholder="/var/www/myapp"
-                    />
-                    <FormControlLabel
-                      control={<Checkbox name="recursive" defaultChecked />}
-                      label="Recursive (include subdirectories)"
-                    />
-                    <TextField
-                      name="exclude_pattern"
-                      label="Exclude Pattern"
-                      fullWidth
-                      placeholder="*.log,node_modules,*.tmp"
-                      helperText="Comma-separated patterns to exclude"
-                    />
-                    <Box display="flex" gap={1}>
-                      <Button type="submit" variant="contained" size="small">
-                        Add
-                      </Button>
-                      <Button size="small" onClick={() => setShowFileRuleForm(false)}>
-                        Cancel
-                      </Button>
-                    </Box>
-                  </Stack>
-                </form>
-              </CardContent>
-            </Card>
+            <AddFileRuleForm
+              formData={newFileRule}
+              onFormDataChange={setNewFileRule}
+              onAdd={handleAddFileRule}
+              onCancel={() => setShowFileRuleForm(false)}
+            />
           )}
 
           <Stack spacing={1}>
@@ -302,7 +282,7 @@ function ConfigureProfileDialog({ open, profileId, onClose }: ConfigureProfileDi
                         </Typography>
                         <Box display="flex" gap={1} mt={1}>
                           <Chip
-                            label={rule.recursive ? 'Recursive' : 'Non-recursive'}
+                            label={rule.remote_path?.trim().endsWith('/') ? 'Directory' : 'File'}
                             size="small"
                             variant="outlined"
                           />

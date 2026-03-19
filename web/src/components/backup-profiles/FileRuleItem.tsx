@@ -26,10 +26,11 @@ function FileRuleItem({ fileRule, profileId, onFileRuleChanged, serverId }: File
   };
 
   const handleSave = async () => {
-    if (!editedPath.trim()) return;
+    const trimmedPath = editedPath.trim();
+    if (!trimmedPath) return;
     try {
       await fileRuleApi.update(fileRule.id, {
-        remote_path: editedPath.trim(),
+        remote_path: trimmedPath,
         recursive: editedRecursive,
         exclude_pattern: editedPattern.trim() || undefined,
       });
@@ -75,14 +76,14 @@ function FileRuleItem({ fileRule, profileId, onFileRuleChanged, serverId }: File
       <Box flex={1} minWidth={0}>
         {isEditing ? (
           <Stack spacing={1}>
-            <PathPickerField
-              label="Remote Path"
-              value={editedPath}
-              onChange={setEditedPath}
-              serverId={serverId}
-              allowDirectories={true}
-              initialPath={editedPath || '/'}
-            />
+              <PathPickerField
+                label="Remote Path"
+                value={editedPath}
+                onChange={setEditedPath}
+                serverId={serverId}
+                allowDirectories={true}
+                initialPath={editedPath || '/'}
+              />
             <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
               <FormControlLabel
                 control={
@@ -116,12 +117,13 @@ function FileRuleItem({ fileRule, profileId, onFileRuleChanged, serverId }: File
             </Typography>
             <Box display="flex" gap={0.5} flexWrap="wrap">
               <Chip
-                label={fileRule.recursive ? 'Recursive' : 'Single file'}
+                label={fileRule.remote_path?.trim().endsWith('/') ? 'Directory' : 'File'}
                 size="small"
-                color={fileRule.recursive ? 'primary' : 'default'}
+                color={fileRule.remote_path?.trim().endsWith('/') ? 'primary' : 'default'}
                 variant="outlined"
                 sx={{ height: 20, fontSize: '0.7rem' }}
               />
+
               {fileRule.exclude_pattern && (
                 <Chip
                   label={`Exclude: ${fileRule.exclude_pattern}`}

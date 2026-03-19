@@ -12,7 +12,8 @@ type BackupFile struct {
 	SizeBytes   int64      `json:"size_bytes"`
 	FileSize    int64      `json:"file_size,omitempty"`
 	Checksum    string     `json:"checksum,omitempty"`
-	Deleted     bool       `gorm:"default:false" json:"deleted"`
+	Deleted     bool       `gorm:"default:false" json:"-"`
+	Available   *bool      `gorm:"-" json:"available,omitempty"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 }

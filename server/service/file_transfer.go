@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 	"log"
-	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,17 +13,19 @@ import (
 
 // FileTransferService handles file transfers with include/exclude rules
 type FileTransferService struct {
-	sshClient *SSHClient
-	destDir   string
-	runID     uint
+	sshClient      *SSHClient
+	storageBackend StorageBackend
+	destDir        string
+	runID          uint
 }
 
 // NewFileTransferService creates a new file transfer service
-func NewFileTransferService(sshClient *SSHClient, destDir string, runID uint) *FileTransferService {
+func NewFileTransferService(sshClient *SSHClient, storageBackend StorageBackend, destDir string, runID uint) *FileTransferService {
 	return &FileTransferService{
-		sshClient: sshClient,
-		destDir:   destDir,
-		runID:     runID,
+		sshClient:      sshClient,
+		storageBackend: storageBackend,
+		destDir:        destDir,
+		runID:          runID,
 	}
 }
 
@@ -45,7 +47,7 @@ func (s *FileTransferService) TransferFiles(fileRules []entity.FileRule) ([]enti
 	var backupFiles []entity.BackupFile
 
 	// Ensure destination directory exists
-	if err := os.MkdirAll(s.destDir, 0755); err != nil {
+	if err := s.storageBackend.EnsureDir(s.destDir); err != nil {
 		s.logToDatabase("ERROR", fmt.Sprintf("Failed to create destination directory: %v", err))
 		return nil, fmt.Errorf("failed to create destination directory: %v", err)
 	}
@@ -85,7 +87,7 @@ func (s *FileTransferService) transferFileRule(rule entity.FileRule) ([]entity.B
 	isDir := strings.TrimSpace(isDirOutput) == "yes"
 
 	if isDir {
-		if rule.Recursive {
+				if rule.Recursive {
 			return s.transferDirectory(rule)
 		}
 		// Non-recursive directory transfer
@@ -99,7 +101,7 @@ func (s *FileTransferService) transferFileRule(rule entity.FileRule) ([]entity.B
 // transferSingleFile transfers a single file
 func (s *FileTransferService) transferSingleFile(rule entity.FileRule) ([]entity.BackupFile, error) {
 	fileName := filepath.Base(rule.RemotePath)
-	localPath := filepath.Join(s.destDir, fileName)
+	localPath := s.joinDestPath(fileName)
 
 	s.logToDatabase("DEBUG", fmt.Sprintf("Transferring file: %s", rule.RemotePath))
 	// Get file size
@@ -114,7 +116,7 @@ func (s *FileTransferService) transferSingleFile(rule entity.FileRule) ([]entity
 	fmt.Sscanf(strings.TrimSpace(sizeOutput), "%d", &fileSize)
 
 	// Download file
-	if err := s.sshClient.CopyFileFromRemote(rule.RemotePath, localPath); err != nil {
+	if err := s.copyRemoteFile(rule.RemotePath, localPath); err != nil {
 		s.logToDatabase("ERROR", fmt.Sprintf("Failed to copy file %s: %v", rule.RemotePath, err))
 		return nil, fmt.Errorf("failed to copy file: %v", err)
 	}
@@ -199,10 +201,10 @@ func (s *FileTransferService) transferDirectory(rule entity.FileRule) ([]entity.
 		// Preserve directory structure
 		relPath := strings.TrimPrefix(file, rule.RemotePath)
 		relPath = strings.TrimPrefix(relPath, "/")
-		localPath := filepath.Join(s.destDir, relPath)
+		localPath := s.joinDestPath(relPath)
 
 		// Create parent directory
-		if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		if err := s.storageBackend.EnsureDir(s.destDirForPath(localPath)); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %v", err)
 		}
 
@@ -217,7 +219,7 @@ func (s *FileTransferService) transferDirectory(rule entity.FileRule) ([]entity.
 		fmt.Sscanf(strings.TrimSpace(sizeOutput), "%d", &fileSize)
 
 		// Download file
-		if err := s.sshClient.CopyFileFromRemote(file, localPath); err != nil {
+		if err := s.copyRemoteFile(file, localPath); err != nil {
 			return nil, fmt.Errorf("failed to copy file %s: %v", file, err)
 		}
 
@@ -262,4 +264,92 @@ func (s *FileTransferService) shouldExclude(filePath, excludePattern string) boo
 	}
 
 	return false
+}
+
+func (s *FileTransferService) joinDestPath(relPath string) string {
+	if s.storageBackend.IsLocal() {
+		return filepath.Join(s.destDir, relPath)
+	}
+	return path.Join(s.destDir, relPath)
+}
+
+func (s *FileTransferService) destDirForPath(filePath string) string {
+	if s.storageBackend.IsLocal() {
+		return filepath.Dir(filePath)
+	}
+	return path.Dir(filePath)
+}
+
+func (s *FileTransferService) copyRemoteFile(remotePath, destPath string) error {
+	if s.storageBackend.IsLocal() {
+		return s.sshClient.CopyFileFromRemote(remotePath, destPath)
+	}
+	writer, err := s.storageBackend.OpenWriter(destPath)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+	return s.sshClient.CopyFileFromRemoteToWriter(remotePath, writer)
+}
+
+func (s *FileTransferService) getRemoteFileSize(remotePath string) (int64, error) {
+	sizeCmd := fmt.Sprintf("stat -c%%s '%s' 2>/dev/null || stat -f%%z '%s'", remotePath, remotePath)
+	sizeOutput, err := s.sshClient.RunCommand(sizeCmd)
+	if err != nil {
+		return 0, err
+	}
+
+	var fileSize int64
+	fmt.Sscanf(strings.TrimSpace(sizeOutput), "%d", &fileSize)
+	return fileSize, nil
+}
+
+func (s *FileTransferService) buildFileListCommand(parentDir, baseName, listFile string) string {
+	cmd := fmt.Sprintf(
+		"cd %s && find %s -xdev -print > %s 2> %s.err; cat %s.err; rm -f %s.err; if [ ! -s %s ]; then exit 1; fi; exit 0",
+		shellQuote(parentDir),
+		shellQuote(baseName),
+		shellQuote(listFile),
+		shellQuote(listFile),
+		shellQuote(listFile),
+		shellQuote(listFile),
+		shellQuote(listFile),
+	)
+	return cmd
+}
+
+func formatCommandFailure(err error, output string) string {
+	if output != "" {
+		return fmt.Sprintf("%v (%s)", err, output)
+	}
+	return err.Error()
+}
+
+func (s *FileTransferService) logPermissionIssues(tool, output string) {
+	if output == "" {
+		return
+	}
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "permission denied") ||
+			strings.Contains(lower, "access is denied") ||
+			strings.Contains(lower, "zugriff verweigert") ||
+			strings.Contains(lower, "operation not permitted") ||
+			strings.Contains(lower, "errno=13") ||
+			strings.Contains(lower, "eacces") {
+			s.logToDatabase("ERROR", fmt.Sprintf("%s permission error: %s", tool, line))
+		}
+	}
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }

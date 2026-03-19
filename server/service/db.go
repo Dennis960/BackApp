@@ -32,6 +32,8 @@ func InitDB(dataSourceName string) {
 	err = DB.AutoMigrate(
 		&entity.Server{},
 		&entity.StorageLocation{},
+		&entity.LocalStorageLocationDetails{},
+		&entity.SftpStorageLocationDetails{},
 		&entity.NamingRule{},
 		&entity.BackupProfile{},
 		&entity.Command{},
@@ -65,14 +67,16 @@ func initializeDefaults() {
 			{
 				Name:     "Local Backups",
 				BasePath: "/var/backups/app",
+				Type:     storageTypeLocal,
 			},
 			{
 				Name:     "Archive",
 				BasePath: "/var/backups/archive",
+				Type:     storageTypeLocal,
 			},
 		}
 		for _, loc := range defaultStorageLocations {
-			if err := DB.Create(&loc).Error; err != nil {
+			if _, err := ServiceCreateStorageLocation(&loc); err != nil {
 				log.Printf("Error creating default storage location '%s': %v", loc.Name, err)
 			} else {
 				log.Printf("Created default storage location: %s", loc.Name)

@@ -1,9 +1,12 @@
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import {
   Box,
   Button,
+  CircularProgress,
   Paper,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -18,9 +21,21 @@ interface StorageLocationListProps {
   locations: StorageLocation[];
   onDelete: (id: number) => void;
   onEdit: (location: StorageLocation) => void;
+  testingConnection: number | null;
+  onTestConnection: (locationId: number) => void;
+  onToggleEnabled: (location: StorageLocation) => void;
+  togglingLocation: number | null;
 }
 
-function StorageLocationList({ locations, onDelete, onEdit }: StorageLocationListProps) {
+function StorageLocationList({
+  locations,
+  onDelete,
+  onEdit,
+  testingConnection,
+  onTestConnection,
+  onToggleEnabled,
+  togglingLocation,
+}: StorageLocationListProps) {
   if (locations.length === 0) {
     return (
       <Box textAlign="center" py={12}>
@@ -43,7 +58,9 @@ function StorageLocationList({ locations, onDelete, onEdit }: StorageLocationLis
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
-            <TableCell>Base Path</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Path</TableCell>
+            <TableCell>Enabled</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -52,6 +69,11 @@ function StorageLocationList({ locations, onDelete, onEdit }: StorageLocationLis
             <TableRow key={location.id} hover>
               <TableCell>
                 <Typography fontWeight="medium">{location.name}</Typography>
+              </TableCell>
+              <TableCell>
+                <Typography textTransform="uppercase" fontSize="0.75rem" color="text.secondary">
+                  {location.type || 'local'}
+                </Typography>
               </TableCell>
               <TableCell>
                 <Box
@@ -64,11 +86,30 @@ function StorageLocationList({ locations, onDelete, onEdit }: StorageLocationLis
                     fontSize: '0.875rem',
                   }}
                 >
-                  {location.base_path}
+                  {location.type === 'sftp' ? location.remote_path || '' : location.base_path}
                 </Box>
               </TableCell>
               <TableCell>
+                <Switch
+                  checked={location.enabled !== false}
+                  onChange={() => onToggleEnabled(location)}
+                  disabled={togglingLocation === location.id}
+                  inputProps={{ 'aria-label': 'toggle storage location' }}
+                />
+              </TableCell>
+              <TableCell>
                 <Stack direction="row" spacing={1}>
+                  {location.type === 'sftp' && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={testingConnection === location.id ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+                      onClick={() => onTestConnection(location.id)}
+                      disabled={testingConnection === location.id || location.enabled === false}
+                    >
+                      Test
+                    </Button>
+                  )}
                   <Button
                     variant="outlined"
                     size="small"

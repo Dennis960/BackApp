@@ -47,6 +47,7 @@ export interface StorageUsage {
   storage_location_id: number;
   name: string;
   base_path: string;
+  enabled: boolean;
   total_bytes: number;
   used_bytes: number;
   free_bytes: number;
