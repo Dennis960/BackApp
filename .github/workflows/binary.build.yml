@@ -142,7 +142,7 @@ jobs:
           path: server/static
 
       - name: Install cross compiler
-        run: apt-get update && apt-get install -y gcc-arm-linux-gnueabihf ca-certificates
+        run: apt-get update && apt-get install -y gcc-arm-linux-gnueabihf ca-certificates git
 
       - name: Set up Go
         uses: actions/setup-go@v5
