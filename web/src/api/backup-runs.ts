@@ -55,3 +55,9 @@ export const backupFileApi = {
     return `/api/v1/backup-files/${id}/download`;
   },
 };
+
+export const backupRunDownloadApi = {
+  getZipDownloadUrl(id: number): string {
+    return `/api/v1/backup-runs/${id}/download-zip`;
+  },
+};

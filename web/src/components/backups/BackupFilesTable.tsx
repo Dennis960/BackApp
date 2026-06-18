@@ -1,4 +1,5 @@
 import DownloadIcon from '@mui/icons-material/Download';
+import ArchiveIcon from '@mui/icons-material/Archive';
 import FolderIcon from '@mui/icons-material/Folder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -24,6 +25,7 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { backupRunDownloadApi } from '../../api/backup-runs';
 import type { BackupFile } from '../../types';
 import { formatDate } from '../../utils/format';
 
@@ -84,9 +86,11 @@ function groupFilesByRun(files: BackupFileRow[]): RunGroup[] {
 function RunGroupRow({
   group,
   onDownload,
+  onDownloadZip,
 }: {
   group: RunGroup;
   onDownload: (fileId: number, filePath: string) => void;
+  onDownloadZip: (runId: number) => void;
 }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(group.files.length === 1);
@@ -139,7 +143,19 @@ function RunGroupRow({
         <TableCell align="right">{formatFileSize(group.totalSize)}</TableCell>
         <TableCell>{formatDate(group.runStartedAt)}</TableCell>
         <TableCell align="right">
-          {!hasMultipleFiles && (
+          {hasMultipleFiles ? (
+            <Tooltip title="Download ZIP">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownloadZip(group.runId);
+                }}
+              >
+                <ArchiveIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
             <Tooltip title="Download file">
               <IconButton
                 size="small"
@@ -218,6 +234,15 @@ function BackupFilesTable({
     document.body.removeChild(link);
   };
 
+  const handleDownloadZip = (runId: number) => {
+    const downloadUrl = backupRunDownloadApi.getZipDownloadUrl(runId);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const runGroups = useMemo(() => groupFilesByRun(files), [files]);
   const displayedGroups = useMemo(() => {
     const start = page * rowsPerPage;
@@ -261,7 +286,12 @@ function BackupFilesTable({
                   </TableHead>
                   <TableBody>
                     {displayedGroups.map((group) => (
-                      <RunGroupRow key={group.runId} group={group} onDownload={handleDownloadFile} />
+                      <RunGroupRow
+                        key={group.runId}
+                        group={group}
+                        onDownload={handleDownloadFile}
+                        onDownloadZip={handleDownloadZip}
+                      />
                     ))}
                   </TableBody>
                 </Table>

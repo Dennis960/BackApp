@@ -64,6 +64,7 @@ func SetupRouter(r *gin.Engine) {
 		api.GET("/backup-runs", handleBackupRunsList)
 		api.GET("/backup-runs/:id", handleBackupRunGet)
 		api.GET("/backup-runs/:id/files", handleBackupRunFiles)
+		api.GET("/backup-runs/:id/download-zip", handleBackupRunDownloadZip)
 		api.GET("/backup-runs/:id/logs", handleBackupRunLogs)
 		api.GET("/backup-runs/:id/deletion-impact", handleBackupRunDeletionImpact)
 		api.DELETE("/backup-runs/:id", handleBackupRunDelete)
