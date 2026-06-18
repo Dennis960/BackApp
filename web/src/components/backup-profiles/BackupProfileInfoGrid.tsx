@@ -64,7 +64,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
   return (
     <Grid container spacing={2} sx={{ mt: 1 }}>
       <Grid size={{ xs: 12, md: 3, sm: 6 }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flexWrap: 'wrap' }}>
           <ComputerIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             Server: <strong>{profile.server?.name || `ID ${profile.server_id}`}</strong>
@@ -72,7 +72,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
         </Box>
       </Grid>
       <Grid size={{ xs: 12, md: 3, sm: 6 }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flexWrap: 'wrap' }}>
           <StorageIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             Storage: <strong>{profile.storage_location?.name || `ID ${profile.storage_location_id}`}</strong>
@@ -80,7 +80,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
         </Box>
       </Grid>
       <Grid size={{ xs: 12, md: 3, sm: 6 }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flexWrap: 'wrap' }}>
           <LabelIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             Naming: <strong>{profile.naming_rule?.name || `ID ${profile.naming_rule_id}`}</strong>
@@ -88,7 +88,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
         </Box>
       </Grid>
       <Grid size={{ xs: 12, md: 3, sm: 6 }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flexWrap: 'wrap' }}>
           <HistoryIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             Runs: <strong>{totalRuns} total</strong>
@@ -97,7 +97,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
       </Grid>
       {lastRun && (
         <Grid size={{ xs: 12 }}>
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box display="flex" alignItems="center" gap={1} sx={{ flexWrap: 'wrap' }}>
             {getStatusIcon(lastRun.status)}
             <Typography variant="body2" color="text.secondary">Last run:</Typography>
             <Chip
@@ -117,7 +117,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
       {profile.schedule_cron && (
         <Grid size={{ xs: 12 }}>
           <Box display="flex" flexDirection="column" alignItems="flex-start" gap={0.5}>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box display="flex" alignItems="center" gap={1} sx={{ flexWrap: 'wrap' }}>
               <ScheduleIcon fontSize="small" color="action" />
               <Typography variant="body2" color="text.secondary">
                 Schedule: <strong>{profile.schedule_cron}</strong>
@@ -132,7 +132,7 @@ function BackupProfileInfoGrid({ profile }: BackupProfileInfoGridProps) {
         </Grid>
       )}
       <Grid size={{ xs: 12 }}>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} sx={{ flexWrap: 'wrap' }}>
           <DeleteSweepIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             Retention:{' '}

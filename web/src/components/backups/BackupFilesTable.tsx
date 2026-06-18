@@ -1,5 +1,4 @@
 import DownloadIcon from '@mui/icons-material/Download';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FolderIcon from '@mui/icons-material/Folder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -18,11 +17,12 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BackupFile } from '../../types';
 import { formatDate } from '../../utils/format';
@@ -39,18 +39,16 @@ interface BackupFilesTableProps {
   title?: string;
   showRunColumn?: boolean;
   emptyMessage?: string;
-  /** Group files by run and collapse runs with multiple files */
   groupByRun?: boolean;
-  /** Maximum number of files/runs to show initially (0 = show all) */
   initialLimit?: number;
 }
 
 export function formatFileSize(bytes?: number): string {
   if (!bytes) return '0 B';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 interface RunGroup {
@@ -63,7 +61,7 @@ interface RunGroup {
 
 function groupFilesByRun(files: BackupFileRow[]): RunGroup[] {
   const groups = new Map<number, RunGroup>();
-  
+
   for (const file of files) {
     if (!groups.has(file.runId)) {
       groups.set(file.runId, {
@@ -74,12 +72,12 @@ function groupFilesByRun(files: BackupFileRow[]): RunGroup[] {
         totalSize: 0,
       });
     }
+
     const group = groups.get(file.runId)!;
     group.files.push(file);
     group.totalSize += file.size_bytes || file.file_size || 0;
   }
-  
-  // Sort by runId descending (most recent first)
+
   return Array.from(groups.values()).sort((a, b) => b.runId - a.runId);
 }
 
@@ -98,11 +96,11 @@ function RunGroupRow({
     <>
       <TableRow
         hover
-        sx={{ 
+        sx={{
           cursor: hasMultipleFiles ? 'pointer' : 'default',
           '& > *': { borderBottom: expanded && hasMultipleFiles ? 'unset' : undefined },
         }}
-        onClick={() => hasMultipleFiles && setExpanded(!expanded)}
+        onClick={() => hasMultipleFiles && setExpanded((current) => !current)}
       >
         <TableCell sx={{ width: 40, p: 0.5 }}>
           {hasMultipleFiles && (
@@ -175,10 +173,7 @@ function RunGroupRow({
                         </TableCell>
                         <TableCell align="right" sx={{ border: 'none', py: 0.5, width: 40 }}>
                           <Tooltip title="Download file">
-                            <IconButton
-                              size="small"
-                              onClick={() => onDownload(file.id, file.remote_path || file.local_path)}
-                            >
+                            <IconButton size="small" onClick={() => onDownload(file.id, file.remote_path || file.local_path)}>
                               <DownloadIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -205,7 +200,12 @@ function BackupFilesTable({
   initialLimit = 0,
 }: BackupFilesTableProps) {
   const navigate = useNavigate();
-  const [showAll, setShowAll] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(initialLimit > 0 ? initialLimit : 10);
+
+  useEffect(() => {
+    setPage(0);
+  }, [files, groupByRun]);
 
   const handleDownloadFile = (fileId: number, filePath: string) => {
     const downloadUrl = `/api/v1/backup-files/${fileId}/download`;
@@ -219,21 +219,16 @@ function BackupFilesTable({
   };
 
   const runGroups = useMemo(() => groupFilesByRun(files), [files]);
-  
-  // Apply limit based on groupByRun mode
   const displayedGroups = useMemo(() => {
-    if (showAll || initialLimit === 0) return runGroups;
-    return runGroups.slice(0, initialLimit);
-  }, [runGroups, showAll, initialLimit]);
-
+    const start = page * rowsPerPage;
+    return runGroups.slice(start, start + rowsPerPage);
+  }, [page, rowsPerPage, runGroups]);
   const displayedFiles = useMemo(() => {
-    if (showAll || initialLimit === 0) return files;
-    return files.slice(0, initialLimit);
-  }, [files, showAll, initialLimit]);
+    const start = page * rowsPerPage;
+    return files.slice(start, start + rowsPerPage);
+  }, [page, rowsPerPage, files]);
 
-  const hiddenCount = groupByRun
-    ? runGroups.length - displayedGroups.length
-    : files.length - displayedFiles.length;
+  const totalCount = groupByRun ? runGroups.length : files.length;
 
   if (groupByRun) {
     return (
@@ -259,38 +254,30 @@ function BackupFilesTable({
                       <TableCell>Path</TableCell>
                       <TableCell align="right">Size</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell align="right" sx={{ width: 60 }}>Actions</TableCell>
+                      <TableCell align="right" sx={{ width: 60 }}>
+                        Actions
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {displayedGroups.map((group) => (
-                      <RunGroupRow
-                        key={group.runId}
-                        group={group}
-                        onDownload={handleDownloadFile}
-                      />
+                      <RunGroupRow key={group.runId} group={group} onDownload={handleDownloadFile} />
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-              {hiddenCount > 0 && (
-                <Box display="flex" justifyContent="center" mt={2}>
-                  <Button
-                    size="small"
-                    startIcon={<ExpandMoreIcon />}
-                    onClick={() => setShowAll(true)}
-                  >
-                    Show {hiddenCount} more run{hiddenCount !== 1 ? 's' : ''}
-                  </Button>
-                </Box>
-              )}
-              {showAll && initialLimit > 0 && runGroups.length > initialLimit && (
-                <Box display="flex" justifyContent="center" mt={2}>
-                  <Button size="small" onClick={() => setShowAll(false)}>
-                    Show less
-                  </Button>
-                </Box>
-              )}
+              <TablePagination
+                component="div"
+                count={totalCount}
+                page={page}
+                onPageChange={(_, nextPage) => setPage(nextPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(event) => {
+                  setRowsPerPage(parseInt(event.target.value, 10));
+                  setPage(0);
+                }}
+                rowsPerPageOptions={[5, 10, 25]}
+              />
             </>
           )}
         </CardContent>
@@ -361,24 +348,18 @@ function BackupFilesTable({
                 </TableBody>
               </Table>
             </TableContainer>
-            {hiddenCount > 0 && (
-              <Box display="flex" justifyContent="center" mt={2}>
-                <Button
-                  size="small"
-                  startIcon={<ExpandMoreIcon />}
-                  onClick={() => setShowAll(true)}
-                >
-                  Show {hiddenCount} more file{hiddenCount !== 1 ? 's' : ''}
-                </Button>
-              </Box>
-            )}
-            {showAll && initialLimit > 0 && files.length > initialLimit && (
-              <Box display="flex" justifyContent="center" mt={2}>
-                <Button size="small" onClick={() => setShowAll(false)}>
-                  Show less
-                </Button>
-              </Box>
-            )}
+            <TablePagination
+              component="div"
+              count={totalCount}
+              page={page}
+              onPageChange={(_, nextPage) => setPage(nextPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setRowsPerPage(parseInt(event.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </>
         )}
       </CardContent>

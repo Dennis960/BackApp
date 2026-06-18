@@ -4,6 +4,7 @@ export interface DeletionImpact {
   backup_files: number;
   total_size_bytes: number;
   file_paths?: string[];
+  backup_path?: string;
 }
 
 export interface StorageLocationMoveImpact {

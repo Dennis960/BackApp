@@ -34,7 +34,7 @@ function BackupProfileCardHeader({
 }: BackupProfileCardHeaderProps) {
   return (
     <Box flex={1}>
-      <Box display="flex" alignItems="center" gap={2} mb={1}>
+      <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2} mb={1}>
         {isEditingName ? (
           <TextField
             value={editedName}
@@ -74,6 +74,7 @@ function BackupProfileCardHeader({
           </Tooltip>
         )}
         <FormControlLabel
+          sx={{ ml: { xs: 0, sm: 1 } }}
           control={(
             <Checkbox
               checked={enabled}

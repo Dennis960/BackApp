@@ -8,21 +8,41 @@ import {
   CircularProgress,
   Grid,
   IconButton,
+  MenuItem,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { backupProfileApi, backupRunApi, storageLocationApi } from '../api';
 import type { BackupProfile, BackupRun, BackupFile, StorageLocation } from '../types';
 import BackupFilesTable, { type BackupFileRow } from '../components/backups/BackupFilesTable';
 
 export default function Backups() {
   const [profiles, setProfiles] = useState<BackupProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [locations, setLocations] = useState<Record<number, StorageLocation>>({});
-  const [filesByProfile, setFilesByProfile] = useState<Record<number, BackupFileRow[]>>({});
+  const [files, setFiles] = useState<BackupFileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+
+  const loadProfileFiles = useCallback(async (profileId: number) => {
+    const runs = await backupRunApi.list({ profileId });
+    const filesByRun = await Promise.all(
+      (runs || []).map(async (run: BackupRun) => {
+        const runFiles = await backupRunApi.getFiles(run.id);
+        return (runFiles || []).map((file: BackupFile) => ({
+          ...file,
+          runId: run.id,
+          runStatus: run.status,
+          runStartedAt: run.start_time,
+          runFinishedAt: run.end_time,
+        } as BackupFileRow));
+      })
+    );
+    setFiles(filesByRun.flat());
+  }, []);
 
   useEffect(() => {
     loadInitial();
@@ -30,37 +50,24 @@ export default function Backups() {
 
   useEffect(() => {
     let interval: number | undefined;
-    if (autoRefresh) {
+    if (autoRefresh && selectedProfileId !== null) {
       interval = window.setInterval(async () => {
-        await loadProfileFiles(profiles);
+        await loadProfileFiles(selectedProfileId);
       }, 5000);
     }
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [autoRefresh, profiles]);
+  }, [autoRefresh, selectedProfileId, loadProfileFiles]);
 
-  const loadProfileFiles = async (profilesData: BackupProfile[]) => {
-    const filesEntries = await Promise.all(
-      (profilesData || []).map(async (p) => {
-        const runs = await backupRunApi.list({ profileId: p.id });
-        const filesByRun = await Promise.all(
-          (runs || []).map(async (run: BackupRun) => {
-            const runFiles = await backupRunApi.getFiles(run.id);
-            return (runFiles || []).map((file: BackupFile) => ({
-              ...file,
-              runId: run.id,
-              runStatus: run.status,
-              runStartedAt: run.start_time,
-              runFinishedAt: run.end_time,
-            } as BackupFileRow));
-          })
-        );
-        return [p.id, filesByRun.flat()] as const;
-      })
-    );
-    setFilesByProfile(Object.fromEntries(filesEntries));
-  };
+  useEffect(() => {
+    if (selectedProfileId !== null) {
+      loadProfileFiles(selectedProfileId).catch((err) => {
+        console.error('Error loading profile files:', err);
+        setError('Failed to load backups data');
+      });
+    }
+  }, [selectedProfileId, loadProfileFiles]);
 
   const loadInitial = async () => {
     try {
@@ -70,12 +77,14 @@ export default function Backups() {
         storageLocationApi.list(),
       ]);
 
-      setProfiles(profilesData || []);
+      const nextProfiles = profilesData || [];
+      setProfiles(nextProfiles);
       const locMap = Object.fromEntries((locationsData || []).map((l) => [l.id, l]));
       setLocations(locMap);
 
-      // Load files for each profile
-      await loadProfileFiles(profilesData || []);
+      if (nextProfiles.length > 0) {
+        setSelectedProfileId((current) => current ?? nextProfiles[0].id);
+      }
 
       setError(null);
     } catch (err) {
@@ -108,11 +117,28 @@ export default function Backups() {
           <FolderOpenIcon />
           <Typography variant="h5" component="h3">Backups</Typography>
         </Box>
-        <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
-          <IconButton onClick={() => setAutoRefresh(!autoRefresh)} color={autoRefresh ? 'primary' : 'default'}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+        <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+          <TextField
+            select
+            size="small"
+            label="Profile"
+            value={selectedProfileId?.toString() ?? ''}
+            onChange={(event) => setSelectedProfileId(Number(event.target.value))}
+            sx={{ minWidth: 220 }}
+            disabled={profiles.length === 0}
+          >
+            {profiles.map((profile) => (
+              <MenuItem key={profile.id} value={String(profile.id)}>
+                {profile.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
+            <IconButton onClick={() => setAutoRefresh(!autoRefresh)} color={autoRefresh ? 'primary' : 'default'}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {error && (
@@ -121,13 +147,16 @@ export default function Backups() {
 
       {profiles.length === 0 ? (
         <Alert severity="info">No backup profiles found.</Alert>
+      ) : selectedProfileId === null ? (
+        <Alert severity="info">Select a backup profile to view its files.</Alert>
       ) : (
-        <Grid container spacing={3}>
-          {profiles.map((profile) => {
-            const location = locations[profile.storage_location_id];
-            const files = filesByProfile[profile.id] || [];
-            return (
-              <Grid key={profile.id} size={{ xs: 12 }}>
+        (() => {
+          const profile = profiles.find((item) => item.id === selectedProfileId);
+          const location = profile ? locations[profile.storage_location_id] : undefined;
+
+          return profile ? (
+            <Grid container spacing={3}>
+              <Grid size={{ xs: 12 }}>
                 <Card>
                   <CardContent>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -150,9 +179,9 @@ export default function Backups() {
                   </CardContent>
                 </Card>
               </Grid>
-            );
-          })}
-        </Grid>
+            </Grid>
+          ) : null;
+        })()
       )}
     </Box>
   );

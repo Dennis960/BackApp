@@ -43,6 +43,7 @@ export interface DestructiveActionDialogProps {
     backupFiles?: number;
     totalSizeBytes?: number;
     filePaths?: string[];
+    backupPath?: string;
     oldPath?: string;
     newPath?: string;
   };
@@ -150,6 +151,23 @@ export function DestructiveActionDialog({
                 Total size: <strong>{formatSize(impact.totalSizeBytes ?? 0)}</strong>
               </Typography>
             )}
+          </Box>
+        )}
+
+        {impact.backupPath && actionType === 'delete' && (impact.backupFiles ?? 0) === 0 && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Cleanup path:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FolderIcon color="action" fontSize="small" />
+              <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                {impact.backupPath}
+              </Typography>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Leftover backup data can be removed from disk during deletion.
+            </Typography>
           </Box>
         )}
 

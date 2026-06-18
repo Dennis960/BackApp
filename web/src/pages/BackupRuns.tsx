@@ -6,29 +6,48 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  MenuItem,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
-import { backupRunApi } from '../api';
+import { backupProfileApi, backupRunApi } from '../api';
 import { BackupRunsList } from '../components/backup-profiles';
-import type { BackupRun } from '../types';
+import type { BackupProfile, BackupRun } from '../types';
 
 function BackupRuns() {
   const [runs, setRuns] = useState<BackupRun[]>([]);
+  const [profiles, setProfiles] = useState<BackupProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const loadRuns = useCallback(async () => {
     try {
-      const data = await backupRunApi.list();
+      const data = await backupRunApi.list({
+        profileId: selectedProfileId === 'all' ? undefined : Number(selectedProfileId),
+      });
       setRuns(data || []);
     } catch (error) {
       console.error('Error loading runs:', error);
     } finally {
       setLoading(false);
     }
+  }, [selectedProfileId]);
+
+  const loadProfiles = useCallback(async () => {
+    try {
+      const data = await backupProfileApi.list();
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
 
   useEffect(() => {
     loadRuns();
@@ -63,6 +82,21 @@ function BackupRuns() {
           Backup Runs
         </Typography>
         <Box display="flex" gap={1}>
+          <TextField
+            select
+            size="small"
+            label="Profile"
+            value={selectedProfileId}
+            onChange={(event) => setSelectedProfileId(event.target.value)}
+            sx={{ minWidth: 220 }}
+          >
+            <MenuItem value="all">All profiles</MenuItem>
+            {profiles.map((profile) => (
+              <MenuItem key={profile.id} value={String(profile.id)}>
+                {profile.name}
+              </MenuItem>
+            ))}
+          </TextField>
           <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
             <Button
               variant={autoRefresh ? 'contained' : 'outlined'}

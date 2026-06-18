@@ -30,7 +30,7 @@ function BackupProfileCardActions({
   const navigate = useNavigate();
 
   return (
-    <Stack direction="row" spacing={1.5} alignItems="flex-start">
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
       <Tooltip title="Execute Backup Now">
         <span>
           <Button
@@ -38,7 +38,8 @@ function BackupProfileCardActions({
             size="large"
             startIcon={<PlayArrow />}
             onClick={onExecute}
-            sx={{ minWidth: 100 }}
+            fullWidth
+            sx={{ minWidth: { sm: 100 } }}
           >
             Run
           </Button>
@@ -50,6 +51,7 @@ function BackupProfileCardActions({
           size="large"
           startIcon={<HistoryIcon />}
           onClick={() => navigate(`/backup-profiles/${profileId}`)}
+          fullWidth
         >
           Details
         </Button>
@@ -60,6 +62,7 @@ function BackupProfileCardActions({
           size="large"
           startIcon={<Edit />}
           onClick={onEdit}
+          fullWidth
         >
           Edit
         </Button>
@@ -70,6 +73,7 @@ function BackupProfileCardActions({
           size="large"
           startIcon={<ContentCopy />}
           onClick={onDuplicate}
+          fullWidth
         >
           Duplicate
         </Button>
@@ -81,6 +85,7 @@ function BackupProfileCardActions({
           color="error"
           startIcon={<Delete />}
           onClick={onDelete}
+          fullWidth
         >
           Delete
         </Button>

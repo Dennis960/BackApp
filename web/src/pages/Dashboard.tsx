@@ -24,6 +24,8 @@ interface DashboardStats {
   profiles: number;
   lastBackup: string;
   failed24h: number;
+  lastFailedProfile: string;
+  lastFailedAt: string;
 }
 
 function Dashboard() {
@@ -32,6 +34,8 @@ function Dashboard() {
     profiles: 0,
     lastBackup: 'N/A',
     failed24h: 0,
+    lastFailedProfile: 'N/A',
+    lastFailedAt: 'N/A',
   });
   const [recentRuns, setRecentRuns] = useState<BackupRun[]>([]);
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([]);
@@ -41,6 +45,11 @@ function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  const getRunTimestamp = (run: BackupRun) => {
+    const timestamp = run.end_time || run.start_time;
+    return timestamp ? new Date(timestamp).getTime() : null;
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -54,21 +63,28 @@ function Dashboard() {
 
       const lastSuccessfulRun = (runs || [])
         .filter((run) => run.status.toLowerCase() === 'success' || run.status.toLowerCase() === 'completed')
-        .sort((a, b) => new Date(b.end_time || '').getTime() - new Date(a.end_time || '').getTime())[0];
+        .sort((a, b) => (getRunTimestamp(b) ?? 0) - (getRunTimestamp(a) ?? 0))[0];
 
       const failedRuns24h = (runs || []).filter((run) => {
-        if (!run.end_time) return false;
-        const endTime = new Date(run.end_time);
+        const runTime = getRunTimestamp(run);
+        if (runTime === null) return false;
         const now = new Date();
-        const diffHours = (now.getTime() - endTime.getTime()) / (1000 * 60 * 60);
+        const diffHours = (now.getTime() - runTime) / (1000 * 60 * 60);
         return diffHours <= 24 && (run.status.toLowerCase() === 'failed' || run.status.toLowerCase() === 'error');
       });
+
+      const profilesById = Object.fromEntries((profiles || []).map((profile) => [profile.id, profile.name]));
+      const lastFailedRun = failedRuns24h
+        .slice()
+        .sort((a, b) => (getRunTimestamp(b) ?? 0) - (getRunTimestamp(a) ?? 0))[0];
 
       setStats({
         servers: servers.length || 0,
         profiles: profiles.length || 0,
-        lastBackup: lastSuccessfulRun ? new Date(lastSuccessfulRun.end_time || '').toLocaleString() : 'N/A',
+        lastBackup: lastSuccessfulRun ? new Date(lastSuccessfulRun.end_time || lastSuccessfulRun.start_time || '').toLocaleString() : 'N/A',
         failed24h: failedRuns24h.length || 0,
+        lastFailedProfile: lastFailedRun ? (profilesById[lastFailedRun.backup_profile_id] ?? `Profile #${lastFailedRun.backup_profile_id}`) : 'N/A',
+        lastFailedAt: lastFailedRun ? new Date(lastFailedRun.end_time || lastFailedRun.start_time || '').toLocaleString() : 'N/A',
       });
 
       setRecentRuns(
@@ -167,6 +183,9 @@ function Dashboard() {
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Needs attention
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                Last failed: {stats.lastFailedProfile} at {stats.lastFailedAt}
               </Typography>
             </CardContent>
           </Card>

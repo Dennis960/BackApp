@@ -304,6 +304,14 @@ function BackupRunDetail() {
       });
     }
 
+    if (deletionImpact.backup_files === 0 && deletionImpact.backup_path) {
+      actions.push({
+        type: 'delete',
+        label: 'Delete leftover backup directory from disk',
+        details: deletionImpact.backup_path,
+      });
+    }
+
     actions.push({
       type: 'delete',
       label: 'Delete backup run logs and metadata',
@@ -416,6 +424,7 @@ function BackupRunDetail() {
           backupFiles: deletionImpact?.backup_files,
           totalSizeBytes: deletionImpact?.total_size_bytes,
           filePaths: deletionImpact?.file_paths,
+          backupPath: deletionImpact?.backup_path,
         }}
         actions={getDeleteRunActions()}
         onConfirm={handleConfirmDeleteRun}

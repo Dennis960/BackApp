@@ -10,7 +10,7 @@ import type { BackupProfile, NamingRule, Server, StorageLocation } from '../../t
 import { CronTextField, NamingRuleSelector, ProfileNameTextField, ServerSelector, StorageLocationSelector } from '../forms';
 
 interface BackupProfileBasicFormProps {
-  initialData?: BackupProfile;
+  initialData?: Partial<BackupProfile>;
   servers: Server[];
   storageLocations: StorageLocation[];
   namingRules: NamingRule[];

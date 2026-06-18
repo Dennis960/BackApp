@@ -4,6 +4,7 @@ import {
   Box,
   Chip,
   Paper,
+  TablePagination,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +16,7 @@ import {
 } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BackupRun, DeletionImpact } from '../../types';
 import { formatDate } from '../../utils/format';
@@ -30,6 +31,8 @@ interface BackupRunsListProps {
 function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
   const navigate = useNavigate();
   const [profilesMap, setProfilesMap] = useState<Record<number, string>>({});
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -49,6 +52,23 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
       }
     })();
   }, []);
+
+  const sortedRuns = useMemo(() => {
+    return [...runs].sort((a, b) => {
+      const aTime = new Date(a.start_time || a.end_time || 0).getTime();
+      const bTime = new Date(b.start_time || b.end_time || 0).getTime();
+      return bTime - aTime;
+    });
+  }, [runs]);
+
+  const paginatedRuns = useMemo(() => {
+    const start = page * rowsPerPage;
+    return sortedRuns.slice(start, start + rowsPerPage);
+  }, [page, rowsPerPage, sortedRuns]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [sortedRuns.length]);
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; text: string }> = {
       pending: { color: 'default', text: 'Pending' },
@@ -137,6 +157,14 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
       });
     }
 
+    if (deletionImpact.backup_files === 0 && deletionImpact.backup_path) {
+      actions.push({
+        type: 'delete',
+        label: 'Delete leftover backup directory from disk',
+        details: deletionImpact.backup_path,
+      });
+    }
+
     actions.push({
       type: 'delete',
       label: 'Delete backup run logs and metadata',
@@ -175,7 +203,7 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {runs.map((run) => {
+          {paginatedRuns.map((run) => {
             const startTime = run.start_time || '';
             const endTime = run.end_time || '';
 
@@ -256,6 +284,18 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
           })}
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={sortedRuns.length}
+        page={page}
+        onPageChange={(_, nextPage) => setPage(nextPage)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(event) => {
+          setRowsPerPage(parseInt(event.target.value, 10));
+          setPage(0);
+        }}
+        rowsPerPageOptions={[5, 10, 25]}
+      />
 
       <DestructiveActionDialog
         open={deleteDialogOpen}
@@ -267,6 +307,7 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
           backupFiles: deletionImpact?.backup_files,
           totalSizeBytes: deletionImpact?.total_size_bytes,
           filePaths: deletionImpact?.file_paths,
+          backupPath: deletionImpact?.backup_path,
         }}
         actions={getDeleteActions()}
         onConfirm={handleConfirmDelete}

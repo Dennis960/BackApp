@@ -56,7 +56,7 @@ function BackupProfileFormDialog({
   }, [open, profile]);
 
   const handleBasicFormChange = (newData: Partial<BackupProfile>) => {
-    setProfileData({ ...profileData, ...newData });
+    setProfileData((current) => ({ ...(current ?? {}), ...newData }));
   };
 
   const handleSave = async (closeAfterSave = false) => {
@@ -129,7 +129,7 @@ function BackupProfileFormDialog({
         <TabPanel value={tab} index={0}>
           {profileData && (
             <BackupProfileBasicForm
-              initialData={profile}
+              initialData={profileData}
               servers={servers}
               storageLocations={storageLocations}
               namingRules={namingRules}

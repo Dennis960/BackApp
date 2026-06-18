@@ -99,6 +99,7 @@ func ServiceDeleteBackupRun(runID uint) error {
 
 	// Track directories for cleanup
 	dirsToCleanup := make(map[string]bool)
+	backupPath := run.LocalBackupPath
 
 	// Delete files from disk
 	for _, file := range files {
@@ -106,6 +107,10 @@ func ServiceDeleteBackupRun(runID uint) error {
 			dirsToCleanup[filepath.Dir(file.LocalPath)] = true
 			os.Remove(file.LocalPath) // Ignore errors, best effort cleanup
 		}
+	}
+
+	if backupPath != "" {
+		os.RemoveAll(backupPath)
 	}
 
 	// Clean up empty directories
@@ -136,6 +141,7 @@ type DeletionImpact struct {
 	BackupFiles    int      `json:"backup_files"`
 	TotalSizeBytes int64    `json:"total_size_bytes"`
 	FilePaths      []string `json:"file_paths,omitempty"`
+	BackupPath     string   `json:"backup_path,omitempty"`
 }
 
 // ServiceGetBackupRunDeletionImpact returns the impact of deleting a backup run
@@ -153,6 +159,7 @@ func ServiceGetBackupRunDeletionImpact(runID uint) (*DeletionImpact, error) {
 	impact := &DeletionImpact{
 		BackupRuns:  1,
 		BackupFiles: len(files),
+		BackupPath:  run.LocalBackupPath,
 	}
 
 	for _, file := range files {
