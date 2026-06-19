@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   checks: write
+  packages: write
 
 jobs:
   build-and-test:
