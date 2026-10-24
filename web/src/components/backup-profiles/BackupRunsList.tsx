@@ -209,11 +209,13 @@ function BackupRunsList({ runs, onRunDeleted }: BackupRunsListProps) {
 
             let duration = '-';
             if (startTime) {
-              if (endTime) {
-                const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
-                duration = Math.round(durationMs / 1000) + 's';
-              } else if (run.status === 'running') {
+              if (run.status === 'running') {
                 duration = 'Running...';
+              } else if (endTime) {
+                const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+                if (Number.isFinite(durationMs) && durationMs >= 0) {
+                  duration = Math.round(durationMs / 1000) + 's';
+                }
               }
             }
 

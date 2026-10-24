@@ -2,7 +2,7 @@ import { ArrowDownward as ArrowDownIcon, ArrowUpward as ArrowUpIcon, Close as Cl
 import { Box, Chip, IconButton, TextField, Tooltip, Typography } from '@mui/material';
 import { useState } from 'react';
 import { commandApi } from '../../api';
-import type { Command } from '../../types';
+import type { Command, CommandUpdateInput } from '../../types';
 
 interface CommandItemProps {
   command: Command;
@@ -11,9 +11,18 @@ interface CommandItemProps {
   sortedCommands: Command[];
   profileId?: number;
   onCommandChanged?: () => void;
+  onDraftChange?: (draft: CommandUpdateInput | null) => void;
 }
 
-function CommandItem({ command, isFirst, isLast, sortedCommands, profileId, onCommandChanged }: CommandItemProps) {
+function CommandItem({
+  command,
+  isFirst,
+  isLast,
+  sortedCommands,
+  profileId,
+  onCommandChanged,
+  onDraftChange,
+}: CommandItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCommand, setEditedCommand] = useState('');
   const [editedWorkingDir, setEditedWorkingDir] = useState('');
@@ -34,6 +43,7 @@ function CommandItem({ command, isFirst, isLast, sortedCommands, profileId, onCo
         run_order: command.run_order,
       });
       setIsEditing(false);
+      onDraftChange?.(null);
       onCommandChanged?.();
     } catch (error) {
       console.error('Failed to update command:', error);
@@ -168,7 +178,16 @@ function CommandItem({ command, isFirst, isLast, sortedCommands, profileId, onCo
               size="small"
               label="Working Directory"
               value={editedWorkingDir}
-              onChange={(e) => setEditedWorkingDir(e.target.value)}
+              onChange={(e) => {
+                const workingDirectory = e.target.value;
+                setEditedWorkingDir(workingDirectory);
+                onDraftChange?.({
+                  command: editedCommand.trim(),
+                  working_directory: workingDirectory || undefined,
+                  run_stage: command.run_stage,
+                  run_order: command.run_order,
+                });
+              }}
               placeholder="/"
               variant="outlined"
             />
@@ -177,10 +196,19 @@ function CommandItem({ command, isFirst, isLast, sortedCommands, profileId, onCo
               size="small"
               label="Command"
               value={editedCommand}
-              onChange={(e) => setEditedCommand(e.target.value)}
               multiline
               rows={2}
               variant="outlined"
+              onChange={(e) => {
+                const nextCommand = e.target.value;
+                setEditedCommand(nextCommand);
+                onDraftChange?.({
+                  command: nextCommand.trim(),
+                  working_directory: editedWorkingDir || undefined,
+                  run_stage: command.run_stage,
+                  run_order: command.run_order,
+                });
+              }}
             />
           </Box>
         ) : (
@@ -214,7 +242,10 @@ function CommandItem({ command, isFirst, isLast, sortedCommands, profileId, onCo
               <Tooltip title="Cancel">
                 <IconButton
                   size="small"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                    setIsEditing(false);
+                    onDraftChange?.(null);
+                  }}
                   color="default"
                 >
                   <CloseIcon fontSize="small" />

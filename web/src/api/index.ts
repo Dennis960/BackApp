@@ -7,4 +7,11 @@ export { backupProfileApi } from './backup-profiles';
 export { backupRunApi, backupFileApi } from './backup-runs';
 export { fileExplorerApi } from './file-explorer';
 export { notificationApi, storageUsageApi, formatBytes } from './notifications';
-export type { PushSubscription, NotificationPreference, NotificationPreferenceInput, StorageUsage, TotalStorageUsage } from './notifications';
+export type {
+  PushSubscription,
+  NotificationPreference,
+  NotificationPreferenceInput,
+  StorageUsage,
+  BackupProfileStorageUsage,
+  TotalStorageUsage,
+} from './notifications';

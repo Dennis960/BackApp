@@ -1,8 +1,8 @@
 import { Add as AddIcon } from '@mui/icons-material';
 import { Button, Stack, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { commandApi } from '../../api';
-import type { Command } from '../../types';
+import type { Command, CommandUpdateInput } from '../../types';
 import AddCommandForm from '../forms/AddCommandForm';
 import CommandItem from './CommandItem';
 
@@ -10,15 +10,22 @@ interface CommandsDisplayProps {
   commands: Command[];
   profileId?: number;
   onCommandsChanged?: () => void;
+  onPendingChangesChange?: (changes: Record<number, CommandUpdateInput>) => void;
 }
 
-function CommandsDisplay({ commands, profileId, onCommandsChanged }: CommandsDisplayProps) {
+function CommandsDisplay({ commands, profileId, onCommandsChanged, onPendingChangesChange }: CommandsDisplayProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const pendingEdits = useRef<Record<number, CommandUpdateInput>>({});
   const [formData, setFormData] = useState({
     command: '',
     working_directory: '',
     run_stage: 'pre' as 'pre' | 'post',
   });
+
+  useEffect(() => {
+    pendingEdits.current = {};
+    onPendingChangesChange?.({});
+  }, [profileId, onPendingChangesChange]);
 
   const handleAddCommand = async () => {
     if (!formData.command.trim() || !profileId) return;
@@ -47,6 +54,17 @@ function CommandsDisplay({ commands, profileId, onCommandsChanged }: CommandsDis
     return a.run_order - b.run_order;
   });
 
+  const updatePendingEdit = (commandId: number, draft: CommandUpdateInput | null) => {
+    const next = { ...pendingEdits.current };
+    if (draft) {
+      next[commandId] = draft;
+    } else {
+      delete next[commandId];
+    }
+    pendingEdits.current = next;
+    onPendingChangesChange?.(next);
+  };
+
   return (
     <Stack spacing={1}>
       {commands.length === 0 ? (
@@ -69,6 +87,7 @@ function CommandsDisplay({ commands, profileId, onCommandsChanged }: CommandsDis
               sortedCommands={sortedCommands}
               profileId={profileId}
               onCommandChanged={onCommandsChanged}
+              onDraftChange={(draft) => updatePendingEdit(cmd.id, draft)}
             />
           );
         })

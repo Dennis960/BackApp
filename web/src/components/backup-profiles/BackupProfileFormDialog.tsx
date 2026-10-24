@@ -1,5 +1,6 @@
 import {
   Box,
+  Alert,
   Button,
   CircularProgress,
   Dialog,
@@ -10,8 +11,8 @@ import {
   Tabs,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { backupProfileApi } from '../../api';
-import type { BackupProfile, NamingRule, Server, StorageLocation } from '../../types';
+import { backupProfileApi, commandApi } from '../../api';
+import type { BackupProfile, CommandUpdateInput, NamingRule, Server, StorageLocation } from '../../types';
 import { TabPanel } from '../common';
 import BackupProfileBasicForm from './BackupProfileBasicForm';
 import BackupProfileCommandsList from './BackupProfileCommandsList';
@@ -40,6 +41,8 @@ function BackupProfileFormDialog({
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<Partial<BackupProfile> | null>(null);
   const [createdProfileId, setCreatedProfileId] = useState<number | null>(null);
+  const [pendingCommandEdits, setPendingCommandEdits] = useState<Record<number, CommandUpdateInput>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const isEditMode = !!profile;
   const hasProfileId = isEditMode || createdProfileId;
 
@@ -52,6 +55,8 @@ function BackupProfileFormDialog({
         setCreatedProfileId(null);
       }
       setTab(0);
+      setPendingCommandEdits({});
+      setFormError(null);
     }
   }, [open, profile]);
 
@@ -64,6 +69,7 @@ function BackupProfileFormDialog({
 
     setLoading(true);
     try {
+      setFormError(null);
       const data = {
         name: profileData.name,
         server_id: profileData.server_id,
@@ -97,12 +103,35 @@ function BackupProfileFormDialog({
       }
     } catch (error) {
       console.error('Error saving profile:', error);
+      setFormError('Failed to save backup profile');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDone = async () => {
+    if (Object.values(pendingCommandEdits).some((command) => !command.command?.trim())) {
+      setFormError('Commands cannot be empty');
+      return;
+    }
+
+    setLoading(true);
+    setFormError(null);
+    try {
+      await Promise.all(
+        Object.entries(pendingCommandEdits).map(([id, command]) =>
+          commandApi.update(Number(id), command)
+        )
+      );
+      setPendingCommandEdits({});
+    } catch (error) {
+      console.error('Error saving modified commands:', error);
+      setFormError('Failed to save modified commands. Please try again.');
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+
     if (isEditMode) {
       await handleSave(true);
       return;
@@ -141,7 +170,10 @@ function BackupProfileFormDialog({
         {hasProfileId && (
           <>
             <TabPanel value={tab} index={1}>
-              <BackupProfileCommandsList profileId={isEditMode ? profile!.id : createdProfileId!} />
+              <BackupProfileCommandsList
+                profileId={isEditMode ? profile!.id : createdProfileId!}
+                onPendingChangesChange={setPendingCommandEdits}
+              />
             </TabPanel>
 
             <TabPanel value={tab} index={2}>
@@ -154,6 +186,7 @@ function BackupProfileFormDialog({
         )}
       </DialogContent>
       <DialogActions>
+        {formError && <Alert severity="error" sx={{ mr: 'auto' }}>{formError}</Alert>}
         <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>

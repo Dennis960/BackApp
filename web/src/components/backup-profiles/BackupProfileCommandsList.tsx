@@ -1,15 +1,17 @@
 import { Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { commandApi } from '../../api';
-import type { Command } from '../../types';
+import type { Command, CommandUpdateInput } from '../../types';
 import CommandsDisplay from './CommandsDisplay';
 
 interface BackupProfileCommandsListProps {
   profileId: number;
+  onPendingChangesChange?: (changes: Record<number, CommandUpdateInput>) => void;
 }
 
 function BackupProfileCommandsList({
   profileId,
+  onPendingChangesChange,
 }: BackupProfileCommandsListProps) {
   const [commands, setCommands] = useState<Command[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,7 @@ function BackupProfileCommandsList({
           commands={commands || []}
           profileId={profileId}
           onCommandsChanged={loadCommands}
+          onPendingChangesChange={onPendingChangesChange}
         />
       )}
     </Box>

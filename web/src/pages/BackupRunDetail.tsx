@@ -178,23 +178,23 @@ function BackupRunDetail() {
 
     if (!startTime) return '-';
 
-    if (endTime) {
-      const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
-      const seconds = Math.floor(durationMs / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
+    const startMs = new Date(startTime).getTime();
+    const endMs = run.status === 'running' ? Date.now() : new Date(endTime).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs <= 0 || endMs <= 0) return '-';
 
-      if (hours > 0) {
-        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-      } else if (minutes > 0) {
-        return `${minutes}m ${seconds % 60}s`;
-      }
-      return `${seconds}s`;
-    } else if (run.status === 'running') {
-      return 'Running...';
+    const durationMs = endMs - startMs;
+    if (durationMs < 0) return '-';
+
+    const seconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
     }
-
-    return '-';
+    return `${seconds}s`;
   };
 
   // Delete run handlers

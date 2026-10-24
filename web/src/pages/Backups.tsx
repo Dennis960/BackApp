@@ -10,6 +10,8 @@ import {
   IconButton,
   MenuItem,
   TextField,
+  Tab,
+  Tabs,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -17,8 +19,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { backupProfileApi, storageLocationApi } from '../api';
 import type { BackupProfile, StorageLocation } from '../types';
 import BackupFilesTable, { type BackupFileRow } from '../components/backups/BackupFilesTable';
+import StorageUsagePanel from '../components/backups/StorageUsagePanel';
 
 export default function Backups() {
+  const [selectedTab, setSelectedTab] = useState(0);
   const [profiles, setProfiles] = useState<BackupProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [locations, setLocations] = useState<Record<number, StorageLocation>>({});
@@ -42,7 +46,7 @@ export default function Backups() {
 
   useEffect(() => {
     let interval: number | undefined;
-    if (autoRefresh && selectedProfileId !== null) {
+    if (autoRefresh && selectedTab === 0 && selectedProfileId !== null) {
       interval = window.setInterval(async () => {
         try {
           await loadProfileFiles(selectedProfileId, page, rowsPerPage);
@@ -55,7 +59,7 @@ export default function Backups() {
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [autoRefresh, selectedProfileId, page, rowsPerPage, loadProfileFiles]);
+  }, [autoRefresh, selectedTab, selectedProfileId, page, rowsPerPage, loadProfileFiles]);
 
   useEffect(() => {
     if (selectedProfileId !== null) {
@@ -102,95 +106,105 @@ export default function Backups() {
 
   return (
     <Box>
-      <Box 
-        display="flex" 
+      <Box
+        display="flex"
         flexDirection={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between" 
+        justifyContent="space-between"
         alignItems={{ xs: 'stretch', sm: 'center' }}
         gap={2}
-        mb={3}
+        mb={2}
       >
         <Box display="flex" alignItems="center" gap={1}>
           <FolderOpenIcon />
           <Typography variant="h5" component="h3">Backups</Typography>
         </Box>
-        <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
-          <TextField
-            select
-            size="small"
-            label="Profile"
-            value={selectedProfileId?.toString() ?? ''}
-            onChange={(event) => {
-              setSelectedProfileId(Number(event.target.value));
-              setPage(0);
-            }}
-            sx={{ minWidth: 220 }}
-            disabled={profiles.length === 0}
-          >
-            {profiles.map((profile) => (
-              <MenuItem key={profile.id} value={String(profile.id)}>
-                {profile.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
-            <IconButton onClick={() => setAutoRefresh(!autoRefresh)} color={autoRefresh ? 'primary' : 'default'}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        {selectedTab === 0 && (
+          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+            <TextField
+              select
+              size="small"
+              label="Profile"
+              value={selectedProfileId?.toString() ?? ''}
+              onChange={(event) => {
+                setSelectedProfileId(Number(event.target.value));
+                setPage(0);
+              }}
+              sx={{ minWidth: 220 }}
+              disabled={profiles.length === 0}
+            >
+              {profiles.map((profile) => (
+                <MenuItem key={profile.id} value={String(profile.id)}>
+                  {profile.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Tooltip title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}>
+              <IconButton onClick={() => setAutoRefresh(!autoRefresh)} color={autoRefresh ? 'primary' : 'default'}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-      )}
+      <Tabs value={selectedTab} onChange={(_, value) => setSelectedTab(value)} sx={{ mb: 2 }}>
+        <Tab label="Backups" />
+        <Tab label="Storage usage" />
+      </Tabs>
 
-      {profiles.length === 0 ? (
-        <Alert severity="info">No backup profiles found.</Alert>
-      ) : selectedProfileId === null ? (
-        <Alert severity="info">Select a backup profile to view its files.</Alert>
+      {selectedTab === 1 ? (
+        <StorageUsagePanel />
       ) : (
-        (() => {
-          const profile = profiles.find((item) => item.id === selectedProfileId);
-          const location = profile ? locations[profile.storage_location_id] : undefined;
+        <>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {profiles.length === 0 ? (
+            <Alert severity="info">No backup profiles found.</Alert>
+          ) : selectedProfileId === null ? (
+            <Alert severity="info">Select a backup profile to view its files.</Alert>
+          ) : (
+            (() => {
+              const profile = profiles.find((item) => item.id === selectedProfileId);
+              const location = profile ? locations[profile.storage_location_id] : undefined;
 
-          return profile ? (
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12 }}>
-                <Card>
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                      <Box>
-                        <Typography variant="h6">{profile.name}</Typography>
-                        {location && (
-                          <Typography variant="body2" color="text.secondary">
-                            Storage: {location.name} ({location.base_path})
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
+              return profile ? (
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12 }}>
+                    <Card>
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                          <Box>
+                            <Typography variant="h6">{profile.name}</Typography>
+                            {location && (
+                              <Typography variant="body2" color="text.secondary">
+                                Storage: {location.name} ({location.base_path})
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
 
-                    <BackupFilesTable
-                      files={files}
-                      title={`Backup Files (${totalFiles.toLocaleString()})`}
-                      serverPagination={{
-                        count: totalFiles,
-                        page,
-                        rowsPerPage,
-                        onPageChange: setPage,
-                        onRowsPerPageChange: (nextRowsPerPage) => {
-                          setRowsPerPage(nextRowsPerPage);
-                          setPage(0);
-                        },
-                      }}
-                      emptyMessage="No backup files for this profile."
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          ) : null;
-        })()
+                        <BackupFilesTable
+                          files={files}
+                          title={`Backup Files (${totalFiles.toLocaleString()})`}
+                          serverPagination={{
+                            count: totalFiles,
+                            page,
+                            rowsPerPage,
+                            onPageChange: setPage,
+                            onRowsPerPageChange: (nextRowsPerPage) => {
+                              setRowsPerPage(nextRowsPerPage);
+                              setPage(0);
+                            },
+                          }}
+                          emptyMessage="No backup files for this profile."
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              ) : null;
+            })()
+          )}
+        </>
       )}
     </Box>
   );

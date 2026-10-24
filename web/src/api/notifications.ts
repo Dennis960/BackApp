@@ -56,6 +56,16 @@ export interface StorageUsage {
   backup_size_bytes: number;
 }
 
+export interface BackupProfileStorageUsage {
+  backup_profile_id: number;
+  profile_name: string;
+  storage_location_id: number;
+  storage_location_name: string;
+  base_path: string;
+  backup_count: number;
+  backup_size_bytes: number;
+}
+
 export interface TotalStorageUsage {
   total_bytes: number;
   used_bytes: number;
@@ -65,6 +75,7 @@ export interface TotalStorageUsage {
   total_backups: number;
   total_backup_size_bytes: number;
   locations: StorageUsage[];
+  profiles: BackupProfileStorageUsage[];
 }
 
 export const notificationApi = {
