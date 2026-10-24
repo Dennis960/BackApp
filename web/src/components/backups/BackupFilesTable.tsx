@@ -43,6 +43,13 @@ interface BackupFilesTableProps {
   emptyMessage?: string;
   groupByRun?: boolean;
   initialLimit?: number;
+  serverPagination?: {
+    count: number;
+    page: number;
+    rowsPerPage: number;
+    onPageChange: (page: number) => void;
+    onRowsPerPageChange: (rowsPerPage: number) => void;
+  };
 }
 
 export function formatFileSize(bytes?: number): string {
@@ -214,13 +221,16 @@ function BackupFilesTable({
   emptyMessage = 'No backup files found.',
   groupByRun = false,
   initialLimit = 0,
+  serverPagination,
 }: BackupFilesTableProps) {
   const navigate = useNavigate();
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(initialLimit > 0 ? initialLimit : 10);
+  const [localPage, setLocalPage] = useState(0);
+  const [localRowsPerPage, setLocalRowsPerPage] = useState(initialLimit > 0 ? initialLimit : 10);
+  const page = serverPagination?.page ?? localPage;
+  const rowsPerPage = serverPagination?.rowsPerPage ?? localRowsPerPage;
 
   useEffect(() => {
-    setPage(0);
+    setLocalPage(0);
   }, [files, groupByRun]);
 
   const handleDownloadFile = (fileId: number, filePath: string) => {
@@ -249,11 +259,27 @@ function BackupFilesTable({
     return runGroups.slice(start, start + rowsPerPage);
   }, [page, rowsPerPage, runGroups]);
   const displayedFiles = useMemo(() => {
+    if (serverPagination) return files;
     const start = page * rowsPerPage;
     return files.slice(start, start + rowsPerPage);
-  }, [page, rowsPerPage, files]);
+  }, [page, rowsPerPage, files, serverPagination]);
 
-  const totalCount = groupByRun ? runGroups.length : files.length;
+  const totalCount = serverPagination?.count ?? (groupByRun ? runGroups.length : files.length);
+  const changePage = (nextPage: number) => {
+    if (serverPagination) {
+      serverPagination.onPageChange(nextPage);
+    } else {
+      setLocalPage(nextPage);
+    }
+  };
+  const changeRowsPerPage = (nextRowsPerPage: number) => {
+    if (serverPagination) {
+      serverPagination.onRowsPerPageChange(nextRowsPerPage);
+    } else {
+      setLocalRowsPerPage(nextRowsPerPage);
+      setLocalPage(0);
+    }
+  };
 
   if (groupByRun) {
     return (
@@ -300,12 +326,9 @@ function BackupFilesTable({
                 component="div"
                 count={totalCount}
                 page={page}
-                onPageChange={(_, nextPage) => setPage(nextPage)}
+                onPageChange={(_, nextPage) => changePage(nextPage)}
                 rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(event) => {
-                  setRowsPerPage(parseInt(event.target.value, 10));
-                  setPage(0);
-                }}
+                onRowsPerPageChange={(event) => changeRowsPerPage(parseInt(event.target.value, 10))}
                 rowsPerPageOptions={[5, 10, 25]}
               />
             </>
@@ -382,13 +405,10 @@ function BackupFilesTable({
               component="div"
               count={totalCount}
               page={page}
-              onPageChange={(_, nextPage) => setPage(nextPage)}
+              onPageChange={(_, nextPage) => changePage(nextPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(event) => {
-                setRowsPerPage(parseInt(event.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[5, 10, 25]}
+              onRowsPerPageChange={(event) => changeRowsPerPage(parseInt(event.target.value, 10))}
+              rowsPerPageOptions={serverPagination ? [25, 50, 100] : [5, 10, 25]}
             />
           </>
         )}

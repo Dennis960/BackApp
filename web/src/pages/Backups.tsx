@@ -14,8 +14,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
-import { backupProfileApi, backupRunApi, storageLocationApi } from '../api';
-import type { BackupProfile, BackupRun, BackupFile, StorageLocation } from '../types';
+import { backupProfileApi, storageLocationApi } from '../api';
+import type { BackupProfile, StorageLocation } from '../types';
 import BackupFilesTable, { type BackupFileRow } from '../components/backups/BackupFilesTable';
 
 export default function Backups() {
@@ -23,25 +23,17 @@ export default function Backups() {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [locations, setLocations] = useState<Record<number, StorageLocation>>({});
   const [files, setFiles] = useState<BackupFileRow[]>([]);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const loadProfileFiles = useCallback(async (profileId: number) => {
-    const runs = await backupRunApi.list({ profileId });
-    const filesByRun = await Promise.all(
-      (runs || []).map(async (run: BackupRun) => {
-        const runFiles = await backupRunApi.getFiles(run.id);
-        return (runFiles || []).map((file: BackupFile) => ({
-          ...file,
-          runId: run.id,
-          runStatus: run.status,
-          runStartedAt: run.start_time,
-          runFinishedAt: run.end_time,
-        } as BackupFileRow));
-      })
-    );
-    setFiles(filesByRun.flat());
+  const loadProfileFiles = useCallback(async (profileId: number, currentPage: number, pageSize: number) => {
+    const result = await backupProfileApi.getFiles(profileId, pageSize, currentPage * pageSize);
+    setFiles(result.files);
+    setTotalFiles(result.total);
   }, []);
 
   useEffect(() => {
@@ -52,22 +44,27 @@ export default function Backups() {
     let interval: number | undefined;
     if (autoRefresh && selectedProfileId !== null) {
       interval = window.setInterval(async () => {
-        await loadProfileFiles(selectedProfileId);
+        try {
+          await loadProfileFiles(selectedProfileId, page, rowsPerPage);
+        } catch (err) {
+          console.error('Error refreshing profile files:', err);
+          setError('Failed to refresh backups data');
+        }
       }, 5000);
     }
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [autoRefresh, selectedProfileId, loadProfileFiles]);
+  }, [autoRefresh, selectedProfileId, page, rowsPerPage, loadProfileFiles]);
 
   useEffect(() => {
     if (selectedProfileId !== null) {
-      loadProfileFiles(selectedProfileId).catch((err) => {
+      loadProfileFiles(selectedProfileId, page, rowsPerPage).catch((err) => {
         console.error('Error loading profile files:', err);
         setError('Failed to load backups data');
       });
     }
-  }, [selectedProfileId, loadProfileFiles]);
+  }, [selectedProfileId, page, rowsPerPage, loadProfileFiles]);
 
   const loadInitial = async () => {
     try {
@@ -123,7 +120,10 @@ export default function Backups() {
             size="small"
             label="Profile"
             value={selectedProfileId?.toString() ?? ''}
-            onChange={(event) => setSelectedProfileId(Number(event.target.value))}
+            onChange={(event) => {
+              setSelectedProfileId(Number(event.target.value));
+              setPage(0);
+            }}
             sx={{ minWidth: 220 }}
             disabled={profiles.length === 0}
           >
@@ -172,8 +172,17 @@ export default function Backups() {
 
                     <BackupFilesTable
                       files={files}
-                      title={`Backup Files (${files.length})`}
-                      groupByRun={true}
+                      title={`Backup Files (${totalFiles.toLocaleString()})`}
+                      serverPagination={{
+                        count: totalFiles,
+                        page,
+                        rowsPerPage,
+                        onPageChange: setPage,
+                        onRowsPerPageChange: (nextRowsPerPage) => {
+                          setRowsPerPage(nextRowsPerPage);
+                          setPage(0);
+                        },
+                      }}
                       emptyMessage="No backup files for this profile."
                     />
                   </CardContent>

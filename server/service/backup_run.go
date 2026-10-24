@@ -8,6 +8,19 @@ import (
 	"backapp-server/entity"
 )
 
+type BackupProfileFile struct {
+	entity.BackupFile
+	RunID         uint      `json:"runId" gorm:"column:run_id"`
+	RunStatus     string    `json:"runStatus" gorm:"column:run_status"`
+	RunStartedAt  time.Time `json:"runStartedAt" gorm:"column:run_started_at"`
+	RunFinishedAt time.Time `json:"runFinishedAt" gorm:"column:run_finished_at"`
+}
+
+type BackupProfileFilesPage struct {
+	Files []BackupProfileFile `json:"files"`
+	Total int64               `json:"total"`
+}
+
 func ServiceCreateBackupRun(profileID uint) (*entity.BackupRun, error) {
 	run := &entity.BackupRun{
 		BackupProfileID: profileID,
@@ -48,6 +61,32 @@ func ServiceListBackupFilesForRun(runID uint) ([]entity.BackupFile, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+func ServiceListBackupFilesForProfile(profileID uint, limit, offset int) (*BackupProfileFilesPage, error) {
+	page := &BackupProfileFilesPage{Files: []BackupProfileFile{}}
+	runJoin := "JOIN backup_runs ON backup_runs.id = backup_files.backup_run_id"
+
+	if err := DB.Model(&entity.BackupFile{}).
+		Joins(runJoin).
+		Where("backup_runs.backup_profile_id = ?", profileID).
+		Count(&page.Total).Error; err != nil {
+		return nil, err
+	}
+
+	err := DB.Table("backup_files").
+		Select("backup_files.*, backup_runs.id AS run_id, backup_runs.status AS run_status, backup_runs.start_time AS run_started_at, backup_runs.end_time AS run_finished_at").
+		Joins(runJoin).
+		Where("backup_runs.backup_profile_id = ?", profileID).
+		Order("backup_runs.id DESC, backup_files.id DESC").
+		Limit(limit).
+		Offset(offset).
+		Scan(&page.Files).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return page, nil
 }
 
 func ServiceGetBackupFile(fileID uint) (*entity.BackupFile, error) {

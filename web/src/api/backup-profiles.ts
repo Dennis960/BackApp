@@ -1,5 +1,16 @@
 import type { BackupProfile, BackupProfileCreateInput, BackupProfileUpdateInput } from '../types/backup-profile';
+import type { BackupFile } from '../types/backup-file';
 import { fetchJSON, fetchWithoutResponse } from './client';
+
+export interface BackupProfileFilesPage {
+  files: Array<BackupFile & {
+    runId: number;
+    runStatus: string;
+    runStartedAt: string;
+    runFinishedAt: string;
+  }>;
+  total: number;
+}
 
 export const backupProfileApi = {
   async list(): Promise<BackupProfile[]> {
@@ -8,6 +19,11 @@ export const backupProfileApi = {
 
   async get(id: number): Promise<BackupProfile> {
     return fetchJSON<BackupProfile>(`/backup-profiles/${id}`);
+  },
+
+  async getFiles(id: number, limit: number, offset: number): Promise<BackupProfileFilesPage> {
+    const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    return fetchJSON<BackupProfileFilesPage>(`/backup-profiles/${id}/files?${query}`);
   },
 
   async create(data: BackupProfileCreateInput): Promise<BackupProfile> {
