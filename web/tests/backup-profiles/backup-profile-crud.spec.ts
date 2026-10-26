@@ -165,7 +165,7 @@ test.describe('Backup Profile CRUD Operations', () => {
       expect(response.status()).toBe(404);
     });
 
-    test('should create profile with multiple file rules', async ({ request }) => {
+    test('should create profile with multiple YAML transfers', async ({ request }) => {
       const serverId = await createServerViaApi(request, 'Server', 'localhost', SSH_PORT, 'root', 'testpass');
       const storagePath = path.join(TEST_BASE_PATH, 'backups');
       const storageLocationId = await createStorageLocationViaApi(request, 'Storage', storagePath);
@@ -184,10 +184,12 @@ test.describe('Backup Profile CRUD Operations', () => {
         ]
       );
 
-      const fileRulesResponse = await request.get(`/api/v1/backup-profiles/${profileId}/file-rules`);
-      expect(fileRulesResponse.ok()).toBeTruthy();
-      const fileRules = await fileRulesResponse.json();
-      expect(fileRules.length).toBe(3);
+      const profileResponse = await request.get(`/api/v1/backup-profiles/${profileId}`);
+      expect(profileResponse.ok()).toBeTruthy();
+      const profile = await profileResponse.json();
+      expect(profile.configuration_yaml).toContain('source: "/backup/db.sql"');
+      expect(profile.configuration_yaml).toContain('source: "/backup/config/"');
+      expect(profile.configuration_yaml).toContain('source: "/backup/logs/"');
     });
   });
 

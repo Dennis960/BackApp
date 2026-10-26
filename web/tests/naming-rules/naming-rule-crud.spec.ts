@@ -153,11 +153,12 @@ test.describe('Naming Rule CRUD Operations', () => {
       await page.goto('/naming-rules');
       await expect(page.getByText('Delete Rule')).toBeVisible();
 
-      // Set up dialog handler BEFORE clicking delete (native confirm dialog)
-      page.on('dialog', dialog => dialog.accept());
-
       // Click delete button
       await page.locator('tr', { hasText: 'Delete Rule' }).getByRole('button', { name: /delete/i }).click();
+
+      // Confirm the destructive action in the impact dialog
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.getByRole('button', { name: 'Delete Naming Rule' }).click();
 
       // Wait for the row to be removed from the DOM
       await expect(page.locator('tr', { hasText: 'Delete Rule' })).not.toBeVisible();
