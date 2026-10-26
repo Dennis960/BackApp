@@ -66,9 +66,7 @@ test.describe('configuration import and export', () => {
         server: expect.objectContaining({ name: 'Export Test Server' }),
         storage_location: expect.objectContaining({ name: 'Export Test Storage' }),
         naming_rule: expect.objectContaining({ name: 'Export Test Naming' }),
-        file_rules: expect.arrayContaining([
-          expect.objectContaining({ remote_path: '/etc/hosts' }),
-        ]),
+        configuration_yaml: expect.stringContaining('source: "/etc/hosts"'),
       }),
     ]));
 

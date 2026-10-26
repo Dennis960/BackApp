@@ -350,8 +350,8 @@ test.describe('Backup Execution', () => {
 
       expect(result.message).toBeDefined();
       expect(result.profile).toBeDefined();
-      expect(result.file_rules).toBeDefined();
-      expect(result.file_rules.length).toBe(2);
+      expect(result.configuration_yaml).toContain('source: "/backup/db_dump.sql"');
+      expect(result.configuration_yaml).toContain('source: "/backup/config.json"');
 
       // Should not have created any actual backup runs
       const runsResponse = await request.get(`/api/v1/backup-runs?profile_id=${profileId}`);

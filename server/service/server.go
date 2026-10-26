@@ -252,14 +252,6 @@ func ServiceDeleteServer(id uint) error {
 			}
 		}
 
-		// Delete commands and file rules for the profile
-		if err := DB.Where("backup_profile_id = ?", profile.ID).Delete(&entity.Command{}).Error; err != nil {
-			return err
-		}
-		if err := DB.Where("backup_profile_id = ?", profile.ID).Delete(&entity.FileRule{}).Error; err != nil {
-			return err
-		}
-
 		// Delete the profile
 		if err := DB.Delete(&profile).Error; err != nil {
 			return err

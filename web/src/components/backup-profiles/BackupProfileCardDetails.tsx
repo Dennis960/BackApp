@@ -2,15 +2,14 @@ import {
   Box,
   Button,
   Collapse,
-  Divider,
-  Grid,
   Typography,
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useState } from 'react';
 import type { BackupProfile } from '../../types';
-import CommandsDisplay from './CommandsDisplay';
-import FileRulesDisplay from './FileRulesDisplay';
+import ConfigureProfileDialog from './ConfigureProfileDialog';
+import { defaultProfileConfigurationYAML } from './default-profile-configuration';
+import YamlProfileEditor from './YamlProfileEditor';
 
 interface BackupProfileCardDetailsProps {
   profile: BackupProfile;
@@ -19,10 +18,10 @@ interface BackupProfileCardDetailsProps {
 
 function BackupProfileCardDetails({ profile, onRefresh }: BackupProfileCardDetailsProps) {
   const [expanded, setExpanded] = useState(false);
+  const [configureOpen, setConfigureOpen] = useState(false);
 
   return (
     <Box>
-      <Divider sx={{ my: 2 }} />
       <Button
         fullWidth
         onClick={() => setExpanded(!expanded)}
@@ -37,44 +36,34 @@ function BackupProfileCardDetails({ profile, onRefresh }: BackupProfileCardDetai
         sx={{ textTransform: 'none', py: 1 }}
       >
         <Typography variant="body2" fontWeight={500}>
-          {expanded ? 'Hide' : 'Show'} Commands & File Rules
+          {expanded ? 'Hide' : 'Show'} YAML Configuration
         </Typography>
       </Button>
 
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <Box mt={3}>
-          <Grid container spacing={3}>
-            {/* Commands Section */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>
-                Commands ({(profile.commands || []).length})
-              </Typography>
-              <CommandsDisplay
-                commands={profile.commands || []}
-                profileId={profile.id}
-                onCommandsChanged={() => {
-                  onRefresh?.();
-                }}
-              />
-            </Grid>
-
-            {/* File Rules Section */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>
-                File Rules ({(profile.file_rules || []).length})
-              </Typography>
-              <FileRulesDisplay
-                fileRules={profile.file_rules || []}
-                profileId={profile.id}
-                serverId={profile.server_id}
-                onFileRulesChanged={() => {
-                  onRefresh?.();
-                }}
-              />
-            </Grid>
-          </Grid>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Define commands and remote file paths in one versioned YAML document.
+          </Typography>
+          <YamlProfileEditor
+            value={profile.configuration_yaml || defaultProfileConfigurationYAML}
+            onChange={() => undefined}
+            readOnly
+            height="300px"
+          />
+          <Button variant="outlined" sx={{ mt: 2 }} onClick={() => setConfigureOpen(true)}>
+            Edit YAML configuration
+          </Button>
         </Box>
       </Collapse>
+      <ConfigureProfileDialog
+        open={configureOpen}
+        profileId={profile.id}
+        onClose={() => {
+          setConfigureOpen(false);
+          onRefresh?.();
+        }}
+      />
     </Box>
   );
 }

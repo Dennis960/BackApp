@@ -21,12 +21,14 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@monaco-editor/react": "^4.7.0",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "cron-parser": "^4.9.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

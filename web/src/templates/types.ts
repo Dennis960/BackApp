@@ -137,6 +137,7 @@ export interface ProfileResult {
 export interface CommandResult {
   run_stage: 'pre' | 'post';
   command: string;
+  working_directory?: string;
 }
 
 export interface FileRuleResult {

@@ -81,6 +81,31 @@ func handleBackupProfileUpdate(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
+func handleBackupProfileConfigurationUpdate(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var input struct {
+		ConfigurationYAML string `json:"configuration_yaml"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
+		return
+	}
+	profile, err := service.ServiceUpdateBackupProfileConfiguration(uint(id), input.ConfigurationYAML)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "backup profile not found"})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, profile)
+}
+
 func handleBackupProfileDelete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -128,82 +153,6 @@ func handleBackupProfileDuplicate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, duplicateProfile)
-}
-
-func handleBackupProfileCommandsList(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-	cmds, err := service.ServiceListCommandsForProfile(int(id))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, cmds)
-}
-
-func handleBackupProfileCommandsCreate(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-	var input entity.Command
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
-		return
-	}
-	if input.Command == "" || input.RunStage == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
-		return
-	}
-	input.BackupProfileID = uint(id)
-	cmd, err := service.ServiceCreateCommand(&input)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, cmd)
-}
-
-func handleBackupProfileFileRulesList(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-	rules, err := service.ServiceListFileRulesForProfile(int(id))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, rules)
-}
-
-func handleBackupProfileFileRulesCreate(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-	var input entity.FileRule
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
-		return
-	}
-	if input.RemotePath == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required fields"})
-		return
-	}
-	input.BackupProfileID = uint(id)
-	rule, err := service.ServiceCreateFileRule(&input)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, rule)
 }
 
 func handleBackupProfileRun(c *gin.Context) {
@@ -262,9 +211,8 @@ func handleBackupProfileDryRun(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"profile":    profile,
-		"commands":   profile.Commands,
-		"file_rules": profile.FileRules,
-		"message":    "Dry run only, nothing executed",
+		"profile":            profile,
+		"configuration_yaml": profile.ConfigurationYAML,
+		"message":            "Dry run only, nothing executed",
 	})
 }

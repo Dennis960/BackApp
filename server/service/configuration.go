@@ -260,8 +260,6 @@ func prepareAddedConfiguration(input *ConfigurationExport) (*ConfigurationExport
 			rule.Name = namingRulesForName(input.NamingRules, ruleNames, rule.Name)
 			output.Profiles[i].NamingRule = &rule
 		}
-		output.Profiles[i].Commands = append([]entity.Command(nil), input.Profiles[i].Commands...)
-		output.Profiles[i].FileRules = append([]entity.FileRule(nil), input.Profiles[i].FileRules...)
 	}
 
 	return &output, nil

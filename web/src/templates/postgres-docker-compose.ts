@@ -142,15 +142,18 @@ export const postgresDockerComposeTemplate: Template<PostgresDockerComposeValues
       commands: [
         {
           run_stage: 'pre',
-          command: `cd ${dockerComposeFolder} && docker compose -f ${dockerComposeFilename} exec -T ${serviceName} pg_dump -U ${databaseUsername} -d ${databaseName} -f ${ctx.values.target.dumpPath}`,
+          command: `docker compose -f ${dockerComposeFilename} exec -T ${serviceName} pg_dump -U ${databaseUsername} -d ${databaseName} -f ${ctx.values.target.dumpPath}`,
+          working_directory: dockerComposeFolder,
         },
         {
           run_stage: 'pre',
-          command: `cd ${dockerComposeFolder} && docker cp $(docker compose -f ${dockerComposeFilename} ps -q ${serviceName}):${ctx.values.target.dumpPath} ${ctx.values.target.dumpPath}`,
+          command: `docker cp $(docker compose -f ${dockerComposeFilename} ps -q ${serviceName}):${ctx.values.target.dumpPath} ${ctx.values.target.dumpPath}`,
+          working_directory: dockerComposeFolder,
         },
         {
           run_stage: 'pre',
-          command: `cd ${dockerComposeFolder} && docker compose -f ${dockerComposeFilename} exec -T ${serviceName} rm -f ${ctx.values.target.dumpPath}`,
+          command: `docker compose -f ${dockerComposeFilename} exec -T ${serviceName} rm -f ${ctx.values.target.dumpPath}`,
+          working_directory: dockerComposeFolder,
         },
         {
           run_stage: 'post',

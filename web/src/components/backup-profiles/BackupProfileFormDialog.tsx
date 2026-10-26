@@ -11,12 +11,12 @@ import {
   Tabs,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { backupProfileApi, commandApi } from '../../api';
-import type { BackupProfile, CommandUpdateInput, NamingRule, Server, StorageLocation } from '../../types';
+import { backupProfileApi } from '../../api';
+import type { BackupProfile, NamingRule, Server, StorageLocation } from '../../types';
 import { TabPanel } from '../common';
 import BackupProfileBasicForm from './BackupProfileBasicForm';
-import BackupProfileCommandsList from './BackupProfileCommandsList';
-import BackupProfileFileRulesList from './BackupProfileFileRulesList';
+import YamlProfileEditor from './YamlProfileEditor';
+import { defaultProfileConfigurationYAML } from './default-profile-configuration';
 
 interface BackupProfileFormDialogProps {
   open: boolean;
@@ -41,7 +41,7 @@ function BackupProfileFormDialog({
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<Partial<BackupProfile> | null>(null);
   const [createdProfileId, setCreatedProfileId] = useState<number | null>(null);
-  const [pendingCommandEdits, setPendingCommandEdits] = useState<Record<number, CommandUpdateInput>>({});
+  const [configurationYAML, setConfigurationYAML] = useState(defaultProfileConfigurationYAML);
   const [formError, setFormError] = useState<string | null>(null);
   const isEditMode = !!profile;
   const hasProfileId = isEditMode || createdProfileId;
@@ -50,12 +50,13 @@ function BackupProfileFormDialog({
     if (open) {
       if (profile) {
         setProfileData(profile);
+        setConfigurationYAML(profile.configuration_yaml || defaultProfileConfigurationYAML);
       } else {
         setProfileData({});
         setCreatedProfileId(null);
+        setConfigurationYAML(defaultProfileConfigurationYAML);
       }
       setTab(0);
-      setPendingCommandEdits({});
       setFormError(null);
     }
   }, [open, profile]);
@@ -78,12 +79,13 @@ function BackupProfileFormDialog({
         schedule_cron: profileData.schedule_cron,
         retention_days: profileData.retention_days,
         enabled: profileData.enabled || false,
+        configuration_yaml: configurationYAML,
       };
 
       let newProfileId: number;
-      if (isEditMode) {
-        await backupProfileApi.update(profile!.id, data);
-        newProfileId = profile!.id;
+      if (isEditMode || createdProfileId) {
+        newProfileId = profile?.id || createdProfileId!;
+        await backupProfileApi.update(newProfileId, data);
       } else {
         const createdProfile = await backupProfileApi.create(data);
         newProfileId = createdProfile.id;
@@ -93,7 +95,7 @@ function BackupProfileFormDialog({
           onSuccess();
           onClose();
         }
-        // After creating, stay on the dialog and allow adding commands/file rules
+        // After creating, stay on the dialog so the YAML can be reviewed.
         return;
       }
 
@@ -110,35 +112,15 @@ function BackupProfileFormDialog({
   };
 
   const handleDone = async () => {
-    if (Object.values(pendingCommandEdits).some((command) => !command.command?.trim())) {
-      setFormError('Commands cannot be empty');
-      return;
-    }
-
     setLoading(true);
     setFormError(null);
     try {
-      await Promise.all(
-        Object.entries(pendingCommandEdits).map(([id, command]) =>
-          commandApi.update(Number(id), command)
-        )
-      );
-      setPendingCommandEdits({});
-    } catch (error) {
-      console.error('Error saving modified commands:', error);
-      setFormError('Failed to save modified commands. Please try again.');
-      setLoading(false);
-      return;
-    }
-    setLoading(false);
-
-    if (isEditMode) {
       await handleSave(true);
-      return;
+    } catch (error) {
+      console.error('Error saving profile configuration:', error);
+      setFormError('Failed to save profile configuration. Check the YAML and try again.');
+      setLoading(false);
     }
-    // In create-and-continue flow, the profile is already created; just close and refresh
-    onSuccess();
-    onClose();
   };
 
   return (
@@ -150,8 +132,7 @@ function BackupProfileFormDialog({
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
           <Tabs value={tab} onChange={(_, newValue) => setTab(newValue)}>
             <Tab label="Profile" />
-            <Tab label="Commands" disabled={!hasProfileId} />
-            <Tab label="File Rules" disabled={!hasProfileId} />
+            <Tab label="Configuration YAML" />
           </Tabs>
         </Box>
 
@@ -167,23 +148,9 @@ function BackupProfileFormDialog({
           )}
         </TabPanel>
 
-        {hasProfileId && (
-          <>
-            <TabPanel value={tab} index={1}>
-              <BackupProfileCommandsList
-                profileId={isEditMode ? profile!.id : createdProfileId!}
-                onPendingChangesChange={setPendingCommandEdits}
-              />
-            </TabPanel>
-
-            <TabPanel value={tab} index={2}>
-              <BackupProfileFileRulesList
-                profileId={isEditMode ? profile!.id : createdProfileId!}
-                serverId={profileData?.server_id}
-              />
-            </TabPanel>
-          </>
-        )}
+        <TabPanel value={tab} index={1}>
+          <YamlProfileEditor value={configurationYAML} onChange={setConfigurationYAML} />
+        </TabPanel>
       </DialogContent>
       <DialogActions>
         {formError && <Alert severity="error" sx={{ mr: 'auto' }}>{formError}</Alert>}

@@ -67,6 +67,14 @@ export const backupProfileApi = {
     });
   },
 
+  async updateConfiguration(id: number, configurationYaml: string): Promise<BackupProfile> {
+    return fetchJSON<BackupProfile>(`/backup-profiles/${id}/configuration`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configuration_yaml: configurationYaml }),
+    });
+  },
+
   async duplicate(id: number): Promise<BackupProfile> {
     return fetchJSON<BackupProfile>(`/backup-profiles/${id}/duplicate`, {
       method: 'POST',
@@ -89,8 +97,8 @@ export const backupProfileApi = {
     });
   },
 
-  async dryRun(id: number): Promise<{ message: string; commands: string[]; files: string[] }> {
-    return fetchJSON<{ message: string; commands: string[]; files: string[] }>(`/backup-profiles/${id}/dry-run`, {
+  async dryRun(id: number): Promise<{ message: string; configuration_yaml: string }> {
+    return fetchJSON<{ message: string; configuration_yaml: string }>(`/backup-profiles/${id}/dry-run`, {
       method: 'POST',
     });
   },

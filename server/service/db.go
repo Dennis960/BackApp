@@ -34,8 +34,6 @@ func InitDB(dataSourceName string) {
 		&entity.StorageLocation{},
 		&entity.NamingRule{},
 		&entity.BackupProfile{},
-		&entity.Command{},
-		&entity.FileRule{},
 		&entity.BackupRun{},
 		&entity.BackupFile{},
 		&entity.BackupRunLog{},
@@ -45,6 +43,9 @@ func InitDB(dataSourceName string) {
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
+	}
+	if err := ServiceMigrateProfilesToYAML(); err != nil {
+		log.Fatalf("Failed to migrate profile configuration to YAML: %v", err)
 	}
 
 	// Initialize default storage locations and naming rules

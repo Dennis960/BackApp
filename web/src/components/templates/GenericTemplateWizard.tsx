@@ -17,7 +17,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import { backupProfileApi, commandApi, fileRuleApi, namingRuleApi, serverApi, storageLocationApi } from '../../api';
+import { backupProfileApi, namingRuleApi, serverApi, storageLocationApi } from '../../api';
+import { stringify } from 'yaml';
 import { getTemplateById } from '../../templates';
 import type { Template, TemplateInput, TemplateStep, TemplateValues, UntypedTemplateContext } from '../../templates/types';
 import type { NamingRule, Server, StorageLocation } from '../../types';
@@ -175,28 +176,23 @@ export default function GenericTemplateWizard({ open, onClose, onSuccess, templa
       };
       const result = template.buildResult(ctx);
 
-      // Create profile
-      const newProfile = await backupProfileApi.create(result.profile);
-
-      // Create commands
-      let orderMap: Record<'pre' | 'post', number> = { pre: 0, post: 0 };
-      for (const cmd of result.commands) {
-        orderMap[cmd.run_stage] += 1;
-        await commandApi.create(newProfile.id, {
-          command: cmd.command,
-          run_stage: cmd.run_stage,
-          run_order: orderMap[cmd.run_stage],
-        });
-      }
-
-      // Create file rules
-      for (const fr of result.fileRules) {
-        await fileRuleApi.create(newProfile.id, {
-          remote_path: fr.remote_path,
-          recursive: fr.recursive ?? false,
-          exclude_pattern: fr.exclude_pattern,
-        });
-      }
+      const beforeBackup = result.commands.filter((command) => command.run_stage === 'pre').map((command) => ({
+        command: command.command,
+        ...(command.working_directory ? { working_directory: command.working_directory } : {}),
+      }));
+      const afterBackup = result.commands.filter((command) => command.run_stage === 'post').map((command) => ({
+        command: command.command,
+        ...(command.working_directory ? { working_directory: command.working_directory } : {}),
+      }));
+      const transfers = result.fileRules.map((rule) => ({
+        source: rule.remote_path,
+        recursive: rule.recursive ?? false,
+        ...(rule.exclude_pattern ? { exclude: rule.exclude_pattern.split(',').map((pattern) => pattern.trim()).filter(Boolean) } : {}),
+      }));
+      await backupProfileApi.create({
+        ...result.profile,
+        configuration_yaml: stringify({ schema_version: 1, before_backup: beforeBackup, after_backup: afterBackup, transfers }),
+      });
 
       onSuccess();
       onClose();

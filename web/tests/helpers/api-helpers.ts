@@ -174,11 +174,14 @@ export async function createBackupProfileViaApi(
       storage_location_id: storageLocationId,
       naming_rule_id: namingRuleId,
       enabled: true,
-      file_rules: fileRules.map((rule, index) => ({
-        remote_path: rule.remote_path,
-        recursive: rule.recursive ?? false,
-        run_order: index + 1,
-      })),
+      configuration_yaml: [
+        'schema_version: 1',
+        'transfers:',
+        ...fileRules.flatMap((rule) => [
+          `  - source: ${JSON.stringify(rule.remote_path)}`,
+          `    recursive: ${rule.recursive ?? false}`,
+        ]),
+      ].join('\n'),
     },
   });
   expect(response.ok()).toBeTruthy();

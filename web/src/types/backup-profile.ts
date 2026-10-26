@@ -1,8 +1,6 @@
 import type { Server } from './server';
 import type { StorageLocation } from './storage-location';
 import type { NamingRule } from './naming-rule';
-import type { Command } from './command';
-import type { FileRule } from './file-rule';
 import type { BackupRun } from './backup-run';
 
 export interface BackupProfile {
@@ -14,12 +12,11 @@ export interface BackupProfile {
   schedule_cron?: string;
   retention_days?: number | null;
   enabled: boolean;
+  configuration_yaml?: string;
   created_at: string;
   server?: Server;
   storage_location?: StorageLocation;
   naming_rule?: NamingRule;
-  commands?: Command[];
-  file_rules?: FileRule[];
   backup_runs?: BackupRun[];
 }
 
@@ -31,6 +28,7 @@ export interface BackupProfileCreateInput {
   schedule_cron?: string;
   retention_days?: number | null;
   enabled: boolean;
+  configuration_yaml?: string;
 }
 
 export interface BackupProfileUpdateInput {
@@ -41,4 +39,5 @@ export interface BackupProfileUpdateInput {
   schedule_cron?: string;
   retention_days?: number | null;
   enabled?: boolean;
+  configuration_yaml?: string;
 }

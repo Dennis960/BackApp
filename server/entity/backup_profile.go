@@ -12,12 +12,11 @@ type BackupProfile struct {
 	ScheduleCron      string    `json:"schedule_cron,omitempty"`
 	RetentionDays     *int      `json:"retention_days"` // nil or 0 means keep forever
 	Enabled           bool      `json:"enabled"`
+	ConfigurationYAML string    `json:"configuration_yaml,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 
 	Server          *Server          `gorm:"foreignKey:ServerID" json:"server,omitempty"`
 	StorageLocation *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storage_location,omitempty"`
 	NamingRule      *NamingRule      `gorm:"foreignKey:NamingRuleID" json:"naming_rule,omitempty"`
-	Commands        []Command        `gorm:"foreignKey:BackupProfileID;constraint:OnDelete:CASCADE" json:"commands,omitempty"`
-	FileRules       []FileRule       `gorm:"foreignKey:BackupProfileID;constraint:OnDelete:CASCADE" json:"file_rules,omitempty"`
 	BackupRuns      []BackupRun      `gorm:"foreignKey:BackupProfileID;constraint:OnDelete:CASCADE" json:"backup_runs,omitempty"`
 }

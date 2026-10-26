@@ -13,8 +13,6 @@ func ServiceListBackupProfiles() ([]entity.BackupProfile, error) {
 		Preload("Server").
 		Preload("StorageLocation").
 		Preload("NamingRule").
-		Preload("Commands").
-		Preload("FileRules").
 		Preload("BackupRuns", func(db *gorm.DB) *gorm.DB {
 			return db.Order("start_time DESC").Limit(10)
 		}).
@@ -31,8 +29,6 @@ func ServiceListBackupProfilesForExport() ([]entity.BackupProfile, error) {
 		Preload("Server").
 		Preload("StorageLocation").
 		Preload("NamingRule").
-		Preload("Commands").
-		Preload("FileRules").
 		Find(&profiles).Error; err != nil {
 		return nil, err
 	}
@@ -81,6 +77,10 @@ func ServiceImportBackupProfiles(
 		profile.ScheduleCron = input.ScheduleCron
 		profile.RetentionDays = input.RetentionDays
 		profile.Enabled = input.Enabled
+		profile.ConfigurationYAML = input.ConfigurationYAML
+		if _, err := parseProfileConfiguration(profile.ConfigurationYAML); err != nil {
+			return 0, fmt.Errorf("invalid configuration for profile %q: %w", profile.Name, err)
+		}
 		if query.Error == gorm.ErrRecordNotFound {
 			if err := db.Create(&profile).Error; err != nil {
 				return 0, fmt.Errorf("failed to import profile %q: %w", profile.Name, err)
@@ -89,33 +89,25 @@ func ServiceImportBackupProfiles(
 			return 0, fmt.Errorf("failed to update profile %q: %w", profile.Name, err)
 		}
 
-		if err := db.Where("backup_profile_id = ?", profile.ID).Delete(&entity.Command{}).Error; err != nil {
-			return 0, err
-		}
-		if err := db.Where("backup_profile_id = ?", profile.ID).Delete(&entity.FileRule{}).Error; err != nil {
-			return 0, err
-		}
-		for _, command := range input.Commands {
-			command.ID = 0
-			command.BackupProfileID = profile.ID
-			if err := db.Create(&command).Error; err != nil {
-				return 0, fmt.Errorf("failed to import commands for profile %q: %w", profile.Name, err)
-			}
-		}
-		for _, fileRule := range input.FileRules {
-			fileRule.ID = 0
-			fileRule.BackupProfileID = profile.ID
-			if err := db.Create(&fileRule).Error; err != nil {
-				return 0, fmt.Errorf("failed to import file rules for profile %q: %w", profile.Name, err)
-			}
-		}
 		imported++
 	}
 	return imported, nil
 }
 
 func ServiceCreateBackupProfile(input *entity.BackupProfile) (*entity.BackupProfile, error) {
-	if err := DB.Create(input).Error; err != nil {
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if input.ConfigurationYAML == "" {
+			input.ConfigurationYAML = emptyProfileConfigurationYAML()
+		}
+		if _, err := parseProfileConfiguration(input.ConfigurationYAML); err != nil {
+			return err
+		}
+		if err := tx.Create(input).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -177,7 +169,14 @@ func ServiceUpdateBackupProfile(id uint, input *entity.BackupProfile) (*entity.B
 	profile.ScheduleCron = input.ScheduleCron
 	profile.RetentionDays = input.RetentionDays
 	profile.Enabled = input.Enabled
-	if err := DB.Save(profile).Error; err != nil {
+	if input.ConfigurationYAML != "" {
+		profile.ConfigurationYAML = input.ConfigurationYAML
+	}
+	if _, err := parseProfileConfiguration(profile.ConfigurationYAML); err != nil {
+		return nil, err
+	}
+	err = DB.Save(profile).Error
+	if err != nil {
 		return nil, err
 	}
 
@@ -187,6 +186,21 @@ func ServiceUpdateBackupProfile(id uint, input *entity.BackupProfile) (*entity.B
 		// Log error but don't fail the update
 	}
 
+	return profile, nil
+}
+
+func ServiceUpdateBackupProfileConfiguration(id uint, configurationYAML string) (*entity.BackupProfile, error) {
+	profile, err := ServiceGetBackupProfile(id)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := parseProfileConfiguration(configurationYAML); err != nil {
+		return nil, err
+	}
+	profile.ConfigurationYAML = configurationYAML
+	if err := DB.Model(profile).Update("configuration_yaml", configurationYAML).Error; err != nil {
+		return nil, err
+	}
 	return profile, nil
 }
 
@@ -210,9 +224,6 @@ func ServiceDuplicateBackupProfile(id uint) (*entity.BackupProfile, error) {
 	duplicate.Name = original.Name + " (Copy)"
 	duplicate.Enabled = false // Duplicates are disabled by default
 
-	// Clear associations to prevent GORM from modifying original records
-	duplicate.Commands = nil
-	duplicate.FileRules = nil
 	duplicate.BackupRuns = nil
 	duplicate.Server = nil
 	duplicate.StorageLocation = nil
@@ -221,26 +232,6 @@ func ServiceDuplicateBackupProfile(id uint) (*entity.BackupProfile, error) {
 	// Save the duplicate profile
 	if err := DB.Create(&duplicate).Error; err != nil {
 		return nil, err
-	}
-
-	// Duplicate associated commands
-	for _, cmd := range original.Commands {
-		newCmd := cmd
-		newCmd.ID = 0
-		newCmd.BackupProfileID = duplicate.ID
-		if err := DB.Create(&newCmd).Error; err != nil {
-			return nil, err
-		}
-	}
-
-	// Duplicate associated file rules
-	for _, rule := range original.FileRules {
-		newRule := rule
-		newRule.ID = 0
-		newRule.BackupProfileID = duplicate.ID
-		if err := DB.Create(&newRule).Error; err != nil {
-			return nil, err
-		}
 	}
 
 	return &duplicate, nil
@@ -252,8 +243,6 @@ func ServiceGetBackupProfileFull(id uint) (*entity.BackupProfile, error) {
 		Preload("Server").
 		Preload("StorageLocation").
 		Preload("NamingRule").
-		Preload("Commands").
-		Preload("FileRules").
 		First(&profile, id).Error; err != nil {
 		return nil, err
 	}

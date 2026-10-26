@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"backapp-server/entity"
@@ -41,8 +40,6 @@ func (e *BackupExecutor) ExecuteBackup(profileID uint, allowDisabled bool) error
 	if err := DB.Preload("Server").
 		Preload("StorageLocation").
 		Preload("NamingRule").
-		Preload("Commands").
-		Preload("FileRules").
 		First(&profile, profileID).Error; err != nil {
 		return fmt.Errorf("failed to load backup profile: %v", err)
 	}
@@ -125,10 +122,14 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 	}
 	defer sshClient.Close()
 	e.logToDatabase(run.ID, "INFO", "SSH connection established")
+	configuration, err := parseProfileConfiguration(profile.ConfigurationYAML)
+	if err != nil {
+		return fmt.Errorf("invalid profile configuration: %v", err)
+	}
 
 	// Execute pre-backup commands
 	e.logToDatabase(run.ID, "INFO", "Executing pre-backup commands")
-	if err := e.executeCommands(sshClient, profile.Commands, "pre", run.ID); err != nil {
+	if err := e.executeCommands(sshClient, configuration.BeforeBackup, "pre", run.ID); err != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Pre-backup commands failed: %v", err))
 		return fmt.Errorf("pre-backup commands failed: %v", err)
 	}
@@ -153,9 +154,9 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 	e.logToDatabase(run.ID, "INFO", "Backup directory created")
 
 	// Transfer files
-	e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Starting file transfer (%d rules)", len(profile.FileRules)))
+	e.logToDatabase(run.ID, "INFO", fmt.Sprintf("Starting file transfer (%d rules)", len(configuration.Transfers)))
 	transferService := NewFileTransferService(sshClient, backupDir, run.ID)
-	backupFiles, err := transferService.TransferFiles(profile.FileRules)
+	backupFiles, err := transferService.TransferFiles(configuration.Transfers)
 	if err != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("File transfer failed: %v", err))
 		return fmt.Errorf("file transfer failed: %v", err)
@@ -181,7 +182,7 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 
 	// Execute post-backup commands
 	e.logToDatabase(run.ID, "INFO", "Executing post-backup commands")
-	if err := e.executeCommands(sshClient, profile.Commands, "post", run.ID); err != nil {
+	if err := e.executeCommands(sshClient, configuration.AfterBackup, "post", run.ID); err != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Post-backup commands failed: %v", err))
 		return fmt.Errorf("post-backup commands failed: %v", err)
 	}
@@ -190,22 +191,8 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 }
 
 // executeCommands executes commands in order for a specific stage (pre/post)
-func (e *BackupExecutor) executeCommands(sshClient *SSHClient, commands []entity.Command, stage string, runID uint) error {
-	// Filter commands by stage
-	var stageCommands []entity.Command
+func (e *BackupExecutor) executeCommands(sshClient *SSHClient, commands []profileCommandYAML, stage string, runID uint) error {
 	for _, cmd := range commands {
-		if cmd.RunStage == stage {
-			stageCommands = append(stageCommands, cmd)
-		}
-	}
-
-	// Sort by run_order
-	sort.Slice(stageCommands, func(i, j int) bool {
-		return stageCommands[i].RunOrder < stageCommands[j].RunOrder
-	})
-
-	// Execute commands in order
-	for _, cmd := range stageCommands {
 		workDir := cmd.WorkingDirectory
 		if workDir == "" {
 			workDir = "/"
