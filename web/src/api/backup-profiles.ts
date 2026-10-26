@@ -1,5 +1,6 @@
 import type { BackupProfile, BackupProfileCreateInput, BackupProfileUpdateInput } from '../types/backup-profile';
 import type { BackupFile } from '../types/backup-file';
+import type { DeletionImpact } from '../types/deletion-impact';
 import { fetchJSON, fetchWithoutResponse } from './client';
 
 export interface BackupProfileFilesPage {
@@ -76,6 +77,10 @@ export const backupProfileApi = {
     return fetchWithoutResponse(`/backup-profiles/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async getDeletionImpact(id: number): Promise<DeletionImpact> {
+    return fetchJSON<DeletionImpact>(`/backup-profiles/${id}/deletion-impact`);
   },
 
   async run(id: number): Promise<{ backup_run_id: number; message: string }> {

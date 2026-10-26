@@ -77,6 +77,31 @@ func ServiceDeleteNamingRule(id string) error {
 	return DB.Delete(&entity.NamingRule{}, "id = ?", id).Error
 }
 
+// ServiceGetNamingRuleDeletionImpact returns the backup data affected by deleting a naming rule.
+func ServiceGetNamingRuleDeletionImpact(id uint) (*DeletionImpact, error) {
+	var rule entity.NamingRule
+	if err := DB.First(&rule, id).Error; err != nil {
+		return nil, err
+	}
+
+	var profiles []entity.BackupProfile
+	if err := DB.Where("naming_rule_id = ?", id).Find(&profiles).Error; err != nil {
+		return nil, err
+	}
+	impact := &DeletionImpact{BackupProfiles: len(profiles)}
+	for _, profile := range profiles {
+		profileImpact, err := ServiceGetBackupProfileDeletionImpact(profile.ID)
+		if err != nil {
+			return nil, err
+		}
+		impact.BackupRuns += profileImpact.BackupRuns
+		impact.BackupFiles += profileImpact.BackupFiles
+		impact.TotalSizeBytes += profileImpact.TotalSizeBytes
+		impact.FilePaths = append(impact.FilePaths, profileImpact.FilePaths...)
+	}
+	return impact, nil
+}
+
 // translatePattern is a helper function that translates naming pattern tokens
 func translatePattern(pattern, serverName, serverHost, profileName string) string {
 	now := time.Now()

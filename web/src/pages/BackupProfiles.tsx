@@ -9,8 +9,9 @@ import { useEffect, useState } from 'react';
 import { backupProfileApi, namingRuleApi, serverApi, storageLocationApi } from '../api';
 import { BackupProfileFormDialog, BackupProfileList } from '../components/backup-profiles';
 import { PrerequisitesAlert } from '../components/common';
+import { DestructiveActionDialog, type DestructiveAction } from '../components/common';
 import { TemplateSelectionDialog } from '../components/dialogs';
-import type { NamingRule, Server, StorageLocation } from '../types';
+import type { DeletionImpact, NamingRule, Server, StorageLocation } from '../types';
 
 function BackupProfiles() {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -20,6 +21,10 @@ function BackupProfiles() {
   const [servers, setServers] = useState<Server[]>([]);
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([]);
   const [namingRules, setNamingRules] = useState<NamingRule[]>([]);
+  const [profileToDelete, setProfileToDelete] = useState<any | null>(null);
+  const [deletionImpact, setDeletionImpact] = useState<DeletionImpact | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadProfiles();
@@ -66,6 +71,54 @@ function BackupProfiles() {
     }
   };
 
+  const handleDeleteRequest = async (id: number) => {
+    const profile = profiles.find((item) => item.id === id);
+    if (!profile) return;
+    setProfileToDelete(profile);
+    setDeleteDialogOpen(true);
+    try {
+      setDeletionImpact(await backupProfileApi.getDeletionImpact(id));
+    } catch (error) {
+      console.error('Error loading backup profile deletion impact:', error);
+      setDeletionImpact({ backup_profiles: 1, backup_runs: 0, backup_files: 0, total_size_bytes: 0 });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!profileToDelete) return;
+    setDeleting(true);
+    try {
+      await backupProfileApi.delete(profileToDelete.id);
+      loadProfiles();
+    } catch (error) {
+      console.error('Error deleting backup profile:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setProfileToDelete(null);
+      setDeletionImpact(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setProfileToDelete(null);
+    setDeletionImpact(null);
+  };
+
+  const getDeleteActions = (): DestructiveAction[] => {
+    if (!deletionImpact) return [];
+    const actions: DestructiveAction[] = [];
+    if (deletionImpact.backup_runs > 0) {
+      actions.push({ type: 'delete', label: `Delete ${deletionImpact.backup_runs} backup run${deletionImpact.backup_runs !== 1 ? 's' : ''}` });
+    }
+    if (deletionImpact.backup_files > 0) {
+      actions.push({ type: 'delete', label: `Delete ${deletionImpact.backup_files} backup file${deletionImpact.backup_files !== 1 ? 's' : ''} from disk` });
+    }
+    actions.push({ type: 'delete', label: `Delete backup profile "${profileToDelete?.name}"` });
+    return actions;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" py={12}>
@@ -104,6 +157,7 @@ function BackupProfiles() {
       <BackupProfileList
         profiles={profiles}
         onRefresh={loadProfiles}
+        onDeleteRequest={handleDeleteRequest}
       />
 
       <BackupProfileFormDialog
@@ -128,6 +182,25 @@ function BackupProfiles() {
           setShowTemplateDialog(false);
           loadProfiles();
         }}
+      />
+
+      <DestructiveActionDialog
+        open={deleteDialogOpen}
+        title={`Delete Backup Profile "${profileToDelete?.name || ''}"`}
+        description="This will permanently delete the profile and its associated backup runs and files."
+        actionType="delete"
+        impact={{
+          backupProfiles: deletionImpact?.backup_profiles,
+          backupRuns: deletionImpact?.backup_runs,
+          backupFiles: deletionImpact?.backup_files,
+          totalSizeBytes: deletionImpact?.total_size_bytes,
+          filePaths: deletionImpact?.file_paths,
+        }}
+        actions={getDeleteActions()}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        confirmText="Delete Backup Profile"
+        loading={deleting}
       />
     </Box>
   );

@@ -11,9 +11,10 @@ import BackupProfileCard from './BackupProfileCard';
 interface BackupProfileListProps {
   profiles: BackupProfile[];
   onRefresh?: () => void;
+  onDeleteRequest?: (id: number) => void;
 }
 
-function BackupProfileList({ profiles, onRefresh }: BackupProfileListProps) {
+function BackupProfileList({ profiles, onRefresh, onDeleteRequest }: BackupProfileListProps) {
   if (profiles.length === 0) {
     return (
       <Card>
@@ -43,6 +44,7 @@ function BackupProfileList({ profiles, onRefresh }: BackupProfileListProps) {
               key={profile.id}
               profile={profile}
               onRefresh={onRefresh}
+              onDeleteRequest={onDeleteRequest}
             />
           ))}
         </Stack>

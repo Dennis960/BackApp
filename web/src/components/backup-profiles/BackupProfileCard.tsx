@@ -16,9 +16,10 @@ import BackupProfileFormDialog from './BackupProfileFormDialog';
 interface BackupProfileCardProps {
   profile: BackupProfile;
   onRefresh?: () => void;
+  onDeleteRequest?: (id: number) => void;
 }
 
-function BackupProfileCard({ profile, onRefresh }: BackupProfileCardProps) {
+function BackupProfileCard({ profile, onRefresh, onDeleteRequest }: BackupProfileCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(profile.name);
   const [enabled, setEnabled] = useState(profile.enabled);
@@ -131,6 +132,10 @@ function BackupProfileCard({ profile, onRefresh }: BackupProfileCardProps) {
   };
 
   const handleDelete = async () => {
+    if (onDeleteRequest) {
+      onDeleteRequest(profile.id);
+      return;
+    }
     if (!confirm('Are you sure you want to delete this backup profile?')) return;
 
     try {

@@ -1,4 +1,5 @@
 import type { NamingRule, NamingRuleCreateInput } from '../types/naming-rule';
+import type { DeletionImpact } from '../types/deletion-impact';
 import { fetchJSON, fetchWithoutResponse } from './client';
 
 export const namingRuleApi = {
@@ -30,6 +31,10 @@ export const namingRuleApi = {
     return fetchWithoutResponse(`/naming-rules/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async getDeletionImpact(id: number): Promise<DeletionImpact> {
+    return fetchJSON<DeletionImpact>(`/naming-rules/${id}/deletion-impact`);
   },
 
   async translate(pattern: string): Promise<string> {

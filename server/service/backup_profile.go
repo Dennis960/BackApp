@@ -137,6 +137,34 @@ func ServiceGetBackupProfile(id uint) (*entity.BackupProfile, error) {
 	return &profile, nil
 }
 
+// ServiceGetBackupProfileDeletionImpact returns the backup data affected by deleting a profile.
+func ServiceGetBackupProfileDeletionImpact(id uint) (*DeletionImpact, error) {
+	if _, err := ServiceGetBackupProfile(id); err != nil {
+		return nil, err
+	}
+
+	impact := &DeletionImpact{BackupProfiles: 1}
+	var runs []entity.BackupRun
+	if err := DB.Where("backup_profile_id = ?", id).Find(&runs).Error; err != nil {
+		return nil, err
+	}
+	impact.BackupRuns = len(runs)
+	for _, run := range runs {
+		var files []entity.BackupFile
+		if err := DB.Where("backup_run_id = ?", run.ID).Find(&files).Error; err != nil {
+			return nil, err
+		}
+		impact.BackupFiles += len(files)
+		for _, file := range files {
+			impact.TotalSizeBytes += file.SizeBytes
+			if file.LocalPath != "" {
+				impact.FilePaths = append(impact.FilePaths, file.LocalPath)
+			}
+		}
+	}
+	return impact, nil
+}
+
 func ServiceUpdateBackupProfile(id uint, input *entity.BackupProfile) (*entity.BackupProfile, error) {
 	profile, err := ServiceGetBackupProfile(id)
 	if err != nil {
