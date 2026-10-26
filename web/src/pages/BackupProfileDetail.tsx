@@ -41,28 +41,24 @@ function BackupProfileDetail() {
   const loadProfileAndFiles = async (profileId: number) => {
     try {
       setLoading(true);
-      const [profileData, runsData] = await Promise.all([
+      const [profileData, runsData, profileFiles] = await Promise.all([
         backupProfileApi.get(profileId),
         backupRunApi.list({ profileId }),
+        backupProfileApi.getAllFiles(profileId),
       ]);
 
       setProfile(profileData);
       setRuns(runsData || []);
 
-      const filesByRun = await Promise.all(
-        (runsData || []).map(async (run) => {
-          const runFiles = await backupRunApi.getFiles(run.id);
-          return (runFiles || []).map((file) => ({
-            ...file,
-            runId: run.id,
-            runStatus: run.status,
-            runStartedAt: run.start_time,
-            runFinishedAt: run.end_time,
-          } as BackupFileRow));
-        })
+      setFiles(
+        (profileFiles || []).map((file) => ({
+          ...file,
+          runId: file.runId,
+          runStatus: file.runStatus,
+          runStartedAt: file.runStartedAt,
+          runFinishedAt: file.runFinishedAt,
+        } as BackupFileRow))
       );
-
-      setFiles(filesByRun.flat());
       setError(null);
     } catch (err) {
       console.error('Failed to load backup profile detail', err);

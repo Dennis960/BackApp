@@ -26,6 +26,26 @@ export const backupProfileApi = {
     return fetchJSON<BackupProfileFilesPage>(`/backup-profiles/${id}/files?${query}`);
   },
 
+  async getAllFiles(id: number): Promise<BackupProfileFilesPage['files']> {
+    const pageSize = 100;
+    const files: BackupProfileFilesPage['files'] = [];
+    let offset = 0;
+    let total = 0;
+
+    do {
+      const page = await this.getFiles(id, pageSize, offset);
+      files.push(...page.files);
+      total = page.total;
+      offset += page.files.length;
+
+      if (page.files.length === 0) {
+        break;
+      }
+    } while (offset < total);
+
+    return files;
+  },
+
   async create(data: BackupProfileCreateInput): Promise<BackupProfile> {
     return fetchJSON<BackupProfile>('/backup-profiles', {
       method: 'POST',

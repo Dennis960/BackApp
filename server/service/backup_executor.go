@@ -143,6 +143,7 @@ func (e *BackupExecutor) executeBackupInternal(profile *entity.BackupProfile, ru
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to create backup directory: %v", err))
 		return fmt.Errorf("failed to create backup directory: %v", err)
 	}
+	run.LocalBackupPath = backupDir
 	absBackupDir, absErr := filepath.Abs(backupDir)
 	if absErr != nil {
 		e.logToDatabase(run.ID, "ERROR", fmt.Sprintf("Failed to get absolute path of backup directory: %v", absErr))

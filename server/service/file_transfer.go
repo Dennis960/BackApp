@@ -101,6 +101,10 @@ func (s *FileTransferService) transferSingleFile(rule entity.FileRule) ([]entity
 	fileName := filepath.Base(rule.RemotePath)
 	localPath := filepath.Join(s.destDir, fileName)
 
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create local directory %s: %v", filepath.Dir(localPath), err)
+	}
+
 	s.logToDatabase("DEBUG", fmt.Sprintf("Transferring file: %s", rule.RemotePath))
 	// Get file size
 	sizeCmd := fmt.Sprintf("stat -c%%s '%s' 2>/dev/null || stat -f%%z '%s'", rule.RemotePath, rule.RemotePath)
