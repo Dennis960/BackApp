@@ -18,6 +18,9 @@ func SetupRouter(r *gin.Engine) {
 	{
 		// Health endpoint under API as well
 		api.GET("/health", handleHealth)
+		api.GET("/configuration/export", handleConfigurationExport)
+		api.POST("/configuration/import", handleConfigurationImport)
+		api.POST("/configuration/import-impact", handleConfigurationImportImpact)
 		api.GET("/servers", handleServersList)
 		api.POST("/servers", handleServersCreate)
 		api.GET("/servers/:id", handleServerGet)

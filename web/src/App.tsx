@@ -10,6 +10,7 @@ import StorageLocations from './pages/StorageLocations.tsx';
 import NamingRules from './pages/NamingRules.tsx';
 import Backups from './pages/Backups.tsx';
 import NotificationSettings from './pages/NotificationSettings.tsx';
+import Configuration from './pages/Configuration.tsx';
 import './App.css';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/storage-locations" element={<StorageLocations />} />
           <Route path="/naming-rules" element={<NamingRules />} />
           <Route path="/notifications" element={<NotificationSettings />} />
+          <Route path="/configuration" element={<Configuration />} />
         </Routes>
       </Layout>
     </Router>

@@ -11,6 +11,6 @@ type Server struct {
 	Username       string    `gorm:"not null" json:"username"`
 	AuthType       string    `gorm:"type:text;check:auth_type IN ('password', 'key')" json:"auth_type"`
 	Password       string    `json:"password,omitempty"`
-	PrivateKeyPath string    `json:"-"`
+	PrivateKeyPath string    `json:"private_key,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }

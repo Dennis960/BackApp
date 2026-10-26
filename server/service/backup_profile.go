@@ -2,6 +2,7 @@ package service
 
 import (
 	"backapp-server/entity"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -20,7 +21,97 @@ func ServiceListBackupProfiles() ([]entity.BackupProfile, error) {
 		Find(&profiles).Error; err != nil {
 		return nil, err
 	}
+
 	return profiles, nil
+}
+
+func ServiceListBackupProfilesForExport() ([]entity.BackupProfile, error) {
+	var profiles []entity.BackupProfile
+	if err := DB.
+		Preload("Server").
+		Preload("StorageLocation").
+		Preload("NamingRule").
+		Preload("Commands").
+		Preload("FileRules").
+		Find(&profiles).Error; err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
+}
+
+func ServiceExportBackupProfiles() ([]entity.BackupProfile, error) {
+	return ServiceListBackupProfilesForExport()
+}
+
+func ServiceImportBackupProfiles(
+	db *gorm.DB,
+	inputs []entity.BackupProfile,
+	serverIDs map[string]uint,
+	locationIDs map[string]uint,
+	ruleIDs map[string]uint,
+) (int, error) {
+	imported := 0
+	for _, input := range inputs {
+		if input.Server == nil || input.StorageLocation == nil || input.NamingRule == nil {
+			return 0, fmt.Errorf("profile %q is missing a server, storage location, or naming rule", input.Name)
+		}
+		serverID, ok := serverIDs[input.Server.Name]
+		if !ok {
+			return 0, fmt.Errorf("profile %q references unknown server %q", input.Name, input.Server.Name)
+		}
+		locationID, ok := locationIDs[input.StorageLocation.Name]
+		if !ok {
+			return 0, fmt.Errorf("profile %q references unknown storage location %q", input.Name, input.StorageLocation.Name)
+		}
+		ruleID, ok := ruleIDs[input.NamingRule.Name]
+		if !ok {
+			return 0, fmt.Errorf("profile %q references unknown naming rule %q", input.Name, input.NamingRule.Name)
+		}
+
+		var profile entity.BackupProfile
+		query := db.Where("name = ?", input.Name).First(&profile)
+		if query.Error != nil && query.Error != gorm.ErrRecordNotFound {
+			return 0, query.Error
+		}
+		profile.Name = input.Name
+		profile.ServerID = serverID
+		profile.StorageLocationID = locationID
+		profile.NamingRuleID = ruleID
+		profile.ScheduleCron = input.ScheduleCron
+		profile.RetentionDays = input.RetentionDays
+		profile.Enabled = input.Enabled
+		if query.Error == gorm.ErrRecordNotFound {
+			if err := db.Create(&profile).Error; err != nil {
+				return 0, fmt.Errorf("failed to import profile %q: %w", profile.Name, err)
+			}
+		} else if err := db.Save(&profile).Error; err != nil {
+			return 0, fmt.Errorf("failed to update profile %q: %w", profile.Name, err)
+		}
+
+		if err := db.Where("backup_profile_id = ?", profile.ID).Delete(&entity.Command{}).Error; err != nil {
+			return 0, err
+		}
+		if err := db.Where("backup_profile_id = ?", profile.ID).Delete(&entity.FileRule{}).Error; err != nil {
+			return 0, err
+		}
+		for _, command := range input.Commands {
+			command.ID = 0
+			command.BackupProfileID = profile.ID
+			if err := db.Create(&command).Error; err != nil {
+				return 0, fmt.Errorf("failed to import commands for profile %q: %w", profile.Name, err)
+			}
+		}
+		for _, fileRule := range input.FileRules {
+			fileRule.ID = 0
+			fileRule.BackupProfileID = profile.ID
+			if err := db.Create(&fileRule).Error; err != nil {
+				return 0, fmt.Errorf("failed to import file rules for profile %q: %w", profile.Name, err)
+			}
+		}
+		imported++
+	}
+	return imported, nil
 }
 
 func ServiceCreateBackupProfile(input *entity.BackupProfile) (*entity.BackupProfile, error) {

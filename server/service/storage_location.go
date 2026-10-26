@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"backapp-server/entity"
+
+	"gorm.io/gorm"
 )
 
 func ServiceListStorageLocations() ([]entity.StorageLocation, error) {
@@ -29,7 +31,38 @@ func ServiceCreateStorageLocation(input *entity.StorageLocation) (*entity.Storag
 	if err := DB.Create(input).Error; err != nil {
 		return nil, err
 	}
+
 	return input, nil
+}
+
+func ServiceExportStorageLocations() ([]entity.StorageLocation, error) {
+	return ServiceListStorageLocations()
+}
+
+func ServiceImportStorageLocations(db *gorm.DB, inputs []entity.StorageLocation) (map[string]uint, error) {
+	ids := make(map[string]uint, len(inputs))
+	for _, input := range inputs {
+		location, err := ServiceUpsertStorageLocation(db, &input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import storage location %q: %w", input.Name, err)
+		}
+		ids[input.Name] = location.ID
+	}
+	return ids, nil
+}
+
+func ServiceUpsertStorageLocation(db *gorm.DB, input *entity.StorageLocation) (*entity.StorageLocation, error) {
+	var location entity.StorageLocation
+	query := db.Where("name = ?", input.Name).First(&location)
+	if query.Error != nil && query.Error != gorm.ErrRecordNotFound {
+		return nil, query.Error
+	}
+	location.Name = input.Name
+	location.BasePath = input.BasePath
+	if query.Error == gorm.ErrRecordNotFound {
+		return &location, db.Create(&location).Error
+	}
+	return &location, db.Save(&location).Error
 }
 
 // StorageLocationMoveImpact represents what will be affected by moving a storage location

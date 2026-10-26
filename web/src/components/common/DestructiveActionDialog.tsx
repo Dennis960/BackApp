@@ -24,7 +24,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import StorageIcon from '@mui/icons-material/Storage';
 import BackupIcon from '@mui/icons-material/Backup';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 
 export interface DestructiveAction {
   type: 'delete' | 'move';
@@ -38,6 +38,9 @@ export interface DestructiveActionDialogProps {
   description?: string;
   actionType: 'delete' | 'move';
   impact: {
+    servers?: number;
+    storageLocations?: number;
+    namingRules?: number;
     backupProfiles?: number;
     backupRuns?: number;
     backupFiles?: number;
@@ -53,6 +56,7 @@ export interface DestructiveActionDialogProps {
   confirmText?: string;
   cancelText?: string;
   loading?: boolean;
+  children?: ReactNode;
 }
 
 function formatSize(bytes: number): string {
@@ -75,6 +79,7 @@ export function DestructiveActionDialog({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   loading = false,
+  children,
 }: DestructiveActionDialogProps) {
   const [showFilePaths, setShowFilePaths] = useState(false);
 
@@ -117,11 +122,38 @@ export function DestructiveActionDialog({
             </Box>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+              {(impact.servers ?? 0) > 0 && (
+                <Chip
+                  data-testid="impact-servers"
+                  icon={<StorageIcon />}
+                  label={`${impact.servers} Server${impact.servers !== 1 ? 's' : ''}`}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
+                />
+              )}
               {(impact.backupProfiles ?? 0) > 0 && (
                 <Chip
                   data-testid="impact-profiles"
                   icon={<StorageIcon />}
                   label={`${impact.backupProfiles} Backup Profile${impact.backupProfiles !== 1 ? 's' : ''}`}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
+                />
+              )}
+              {(impact.storageLocations ?? 0) > 0 && (
+                <Chip
+                  data-testid="impact-storage-locations"
+                  icon={<FolderIcon />}
+                  label={`${impact.storageLocations} Storage Location${impact.storageLocations !== 1 ? 's' : ''}`}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
+                />
+              )}
+              {(impact.namingRules ?? 0) > 0 && (
+                <Chip
+                  data-testid="impact-naming-rules"
+                  icon={<FolderIcon />}
+                  label={`${impact.namingRules} Naming Rule${impact.namingRules !== 1 ? 's' : ''}`}
                   size="small"
                   sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
                 />
@@ -273,6 +305,8 @@ export function DestructiveActionDialog({
             </Collapse>
           </Box>
         )}
+
+        {children}
 
         <Divider sx={{ my: 2 }} />
 

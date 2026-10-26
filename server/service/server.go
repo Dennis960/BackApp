@@ -1,6 +1,11 @@
 package service
 
-import "backapp-server/entity"
+import (
+	"backapp-server/entity"
+	"fmt"
+
+	"gorm.io/gorm"
+)
 
 // internal helpers
 
@@ -49,7 +54,53 @@ func ServiceListServers() ([]entity.Server, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return sanitizeServers(servers), nil
+}
+
+func ServiceListServersForExport() ([]entity.Server, error) {
+	return listServersRaw()
+}
+
+func ServiceExportServers() ([]entity.Server, error) {
+	return ServiceListServersForExport()
+}
+
+func ServiceImportServers(db *gorm.DB, inputs []entity.Server) (map[string]uint, error) {
+	ids := make(map[string]uint, len(inputs))
+	for _, input := range inputs {
+		server, err := ServiceUpsertServer(db, &input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import server %q: %w", input.Name, err)
+		}
+		ids[input.Name] = server.ID
+	}
+	return ids, nil
+}
+
+func ServiceUpsertServer(db *gorm.DB, input *entity.Server) (*entity.Server, error) {
+	var server entity.Server
+	query := db.Where("name = ?", input.Name).First(&server)
+	if query.Error != nil && query.Error != gorm.ErrRecordNotFound {
+		return nil, query.Error
+	}
+	server.Name = input.Name
+	server.Host = input.Host
+	server.Port = input.Port
+	server.Username = input.Username
+	server.AuthType = input.AuthType
+	server.Password = input.Password
+	server.PrivateKeyPath = input.PrivateKeyPath
+	if server.Port == 0 {
+		server.Port = 22
+	}
+	if server.AuthType != "password" && server.AuthType != "key" {
+		return nil, fmt.Errorf("server %q has unsupported authentication type", input.Name)
+	}
+	if query.Error == gorm.ErrRecordNotFound {
+		return &server, db.Create(&server).Error
+	}
+	return &server, db.Save(&server).Error
 }
 
 func ServiceGetServer(id uint) (*entity.Server, error) {

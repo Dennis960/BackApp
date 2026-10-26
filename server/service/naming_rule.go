@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"backapp-server/entity"
+
+	"gorm.io/gorm"
 )
 
 func ServiceListNamingRules() ([]entity.NamingRule, error) {
@@ -20,7 +22,38 @@ func ServiceCreateNamingRule(input *entity.NamingRule) (*entity.NamingRule, erro
 	if err := DB.Create(input).Error; err != nil {
 		return nil, err
 	}
+
 	return input, nil
+}
+
+func ServiceExportNamingRules() ([]entity.NamingRule, error) {
+	return ServiceListNamingRules()
+}
+
+func ServiceImportNamingRules(db *gorm.DB, inputs []entity.NamingRule) (map[string]uint, error) {
+	ids := make(map[string]uint, len(inputs))
+	for _, input := range inputs {
+		rule, err := ServiceUpsertNamingRule(db, &input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import naming rule %q: %w", input.Name, err)
+		}
+		ids[input.Name] = rule.ID
+	}
+	return ids, nil
+}
+
+func ServiceUpsertNamingRule(db *gorm.DB, input *entity.NamingRule) (*entity.NamingRule, error) {
+	var rule entity.NamingRule
+	query := db.Where("name = ?", input.Name).First(&rule)
+	if query.Error != nil && query.Error != gorm.ErrRecordNotFound {
+		return nil, query.Error
+	}
+	rule.Name = input.Name
+	rule.Pattern = input.Pattern
+	if query.Error == gorm.ErrRecordNotFound {
+		return &rule, db.Create(&rule).Error
+	}
+	return &rule, db.Save(&rule).Error
 }
 
 func ServiceUpdateNamingRule(id uint, input *entity.NamingRule) (*entity.NamingRule, error) {
